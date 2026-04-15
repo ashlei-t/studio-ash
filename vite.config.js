@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ALLOWED = ['context.md', 'now.md', 'log.md']
+const ALLOWED_THREAD = /^thread_[a-z]+\.json$/
 
 function contextApiPlugin() {
   return {
@@ -12,7 +13,7 @@ function contextApiPlugin() {
       server.middlewares.use('/api/context', (req, res) => {
         const file = req.url.replace(/^\//, '').split('?')[0]
 
-        if (!ALLOWED.includes(file)) {
+        if (!ALLOWED.includes(file) && !ALLOWED_THREAD.test(file)) {
           res.writeHead(404, { 'Content-Type': 'text/plain' })
           return res.end('not found')
         }

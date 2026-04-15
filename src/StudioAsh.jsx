@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { AssistantMarkdown, InlineMd } from "./AssistantMarkdown.jsx";
+import { AssistantMarkdown } from "./AssistantMarkdown.jsx";
 
 function getTimeSlot(hour) {
   if (hour >= 5  && hour < 14) return "morning";
@@ -13,23 +13,13 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-const VIEWS = [
-  { id: "morning", label: "morning" },
-  { id: "focus",   label: "focus" },
-  { id: "evening", label: "evening" },
-];
-
-const ghostBtn = {
-  fontSize: 12,
-  padding: "4px 14px",
-  borderRadius: 6,
-  border: "0.5px solid var(--color-border-tertiary)",
-  background: "transparent",
-  cursor: "pointer",
-  fontFamily: "var(--font-sans)",
-  color: "var(--color-text-tertiary)",
-  lineHeight: 1,
-};
+function isSameCalendarDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -75,7 +65,8 @@ async function writeContextFile(file, content, mode = "replace") {
 
 // ── Context update parsing ────────────────────────────────────────────────────
 
-const UPDATE_RE = /---UPDATE:([\w.]+):(append|replace)---([\s\S]*?)---END---/g;
+const UPDATE_RE =
+  /---UPDATE:([\w.]+):(append|replace)---([\s\S]*?)---\s*END(?:\s*---|\s*$)/g;
 
 function parseResponse(text) {
   const updates = [];
@@ -102,9 +93,15 @@ You may end your reply with structured blocks. They are applied by the app and *
 - When they clearly **completed**, **cancelled**, or **delegated** something that still appears open in now.md, mark it \`- [x]\` or remove it—whichever fits how they write the file.
 - Use **replace** with the **entire** updated file: copy the current now.md, change only what this conversation implies, and preserve everything else (headings, sections, unrelated projects).
 - If nothing in now.md should change this turn, omit the now.md block.
+- **Focus thread:** Brain-dumps often change now.md—apply the bullets above when their dump adds, completes, or reprioritizes work.
+- **+ quick capture:** Use **replace** when they state a **new** task, a **completion**, or a **correction** to a line that appears in now.md.
 
 ### log.md — dated day notes
 - **append** a short dated entry when something **worth remembering** happened: a decision, milestone, emotional beat, or "how the day went"—not every reply.
+- **Morning thread:** Substantive pages (not just "hi") → append a dated \`log.md\` block for today when mood, tension, or a line is worth replaying later.
+- **Focus thread:** Append when they mention a **decision, milestone, or emotional beat** worth remembering—not for every minor plan tweak.
+- **Evening thread:** If they reflect on their day in any real way (energy, wins, friction, closure), **always** append a dated \`log.md\` block for today—unless they only greeted you or said nothing substantive. This is the default; do not wait for them to ask.
+- **+ quick capture:** Treat as field notes: **default to** a \`log.md\` append for the capture unless the line is truly trivial.
 
 ### context.md — slow-moving background
 - **replace** with the full file only when **durable facts** shift: projects, people, tools, preferences, constraints. Day-to-day tasks belong in now.md, not here.
@@ -128,20 +125,87 @@ Replace context.md (full file body):
 ---END---
 
 Never emit partial or malformed blocks. Use separate blocks if more than one file changes.
+- **At most one \`log.md\` append per reply** unless two clearly different beats happened in the same turn. Never emit two append blocks with the same dated heading and same paragraph—that duplicates the file.
 `;
 
-const CONTEXT_INSTRUCTIONS_CAPTURE = `
-### + quick-capture thread (this mode)
-Your visible reply stays **one short clause**. You may place silent update blocks **after** that clause (the app strips them). Prefer a single \`log.md\` **append** for a same-day note. Use \`now.md\` **replace** only when the line is clearly a new task, a completion, or a correction to their list—merge minimally from the now.md you already have in context.
-`;
+// ── Prompt map (keyed by time slot) ───────────────────────────────────────────
 
-// ── Shared hook for context + API ─────────────────────────────────────────────
+const PROMPT_MAP = {
+  morning: `You are a calm, direct presence in Studio Ash. The user is doing 
+morning pages — freewriting to clear their head before the day. 
+Read what they write and respond in 2-3 sentences. Notice the 
+energy underneath it — whether they're scattered, sharp, heavy, 
+or good. Surface any buried tasks without making it a to-do review. 
+You have context on who this person is — use it quietly, don't announce it. 
 
-function useThread(storageKey, systemPromptBase, contextMode = "chat") {
-  const [thread, setThread] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { return []; }
-  });
-  const [input, setInput] = useState("");
+## Silent updates (do not skip)
+After your visible reply, use the context-file instructions: when 
+their pages are substantive, append \`log.md\` for today (tone, 
+tension, memorable lines). When they add or complete tasks vs. 
+now.md, emit \`now.md\` replace. Never ask them to log or update files.
+
+Never reference their astrology directly.
+Never use motivational language, affirmations, or inspirational 
+framing. No "you've got this", no rhetorical questions, no em-dashes 
+for dramatic effect. Write like a sharp friend who doesn't perform 
+warmth. Don't coach. Don't cheerlead. Just be honest and present.`,
+
+  focus: `You are a practical thinking partner. The user is transitioning 
+into their work block and brain-dumping tasks, ideas, and to-dos. 
+Turn their dump into a realistic plan — ordered, specific, nothing 
+vague. Flag if they're overloading the day or starting too many 
+things at once without finishing what's already open. Cross-reference 
+now.md and call out anything that conflicts or needs to move. 
+You have context on who this person is — use it quietly, don't announce it. 
+
+## Silent updates (do not skip)
+After your visible reply, use the context-file instructions: 
+\`now.md\` replace when their dump adds, completes, or reprioritizes 
+work vs. the sprint in context. \`log.md\` append when they mention a 
+decision, milestone, or emotional beat worth remembering. Never ask 
+them to log or update files.
+
+Never reference their astrology directly.
+No preamble, just the plan. Never use motivational language, 
+affirmations, or inspirational framing. No "you've got this", 
+no rhetorical questions, no em-dashes for dramatic effect. 
+Write like a sharp friend who doesn't perform warmth.`,
+
+  evening: `You are a grounded presence at the end of the user's workday. 
+Read their reflection and respond with: one honest observation 
+about the day (2 sentences max), occasionally one real wind-down 
+suggestion — not a habit tip, something that actually helps a 
+person decompress. One thing worth carrying into tomorrow. 
+Don't recap what they said back to them. Say something true.
+You have context on who this person is — use it quietly, don't announce it. 
+
+## Silent log (do not skip)
+If they wrote anything substantive about how the day went, what 
+landed, or what they're releasing, you **must** follow your 
+context-file instructions and end with a \`log.md\` **append** block 
+for today's date (exact \`---UPDATE:log.md:append---\` … \`---END---\` 
+syntax). The app strips it before they see the message—never ask 
+them to log it or confirm. Omit the block only when their message 
+was trivial (e.g. hi / ok / nothing yet).
+
+Never reference their astrology directly.
+Never use motivational language, affirmations, or inspirational 
+framing. No "you've got this", no rhetorical questions, no em-dashes 
+for dramatic effect. Write like a sharp friend who doesn't perform 
+warmth.`,
+};
+
+const PLACEHOLDER_MAP = {
+  morning: "good morning.",
+  focus:   "what's been on your mind.",
+  evening: "good evening",
+};
+
+// ── Document hook (single scrollable day) ─────────────────────────────────────
+
+function useDocument() {
+  const docFile = "thread_document.json";
+  const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ctx, setCtx] = useState({ context: "", now: "", log: "" });
   const [toast, setToast] = useState("");
@@ -155,20 +219,20 @@ function useThread(storageKey, systemPromptBase, contextMode = "chat") {
     setCtx({ context, now, log });
   }, []);
 
-  useEffect(() => { loadContext(); }, [loadContext]);
-
-  function buildSystemPrompt() {
-    const parts = [systemPromptBase];
-    if (ctx.context) parts.push(`\n## Personal context\n${ctx.context}`);
-    if (ctx.now)     parts.push(`\n## Current sprint (now.md)\n${ctx.now}`);
-    if (ctx.log)     parts.push(`\n## Log (log.md)\n${ctx.log}`);
-    parts.push(
-      contextMode === "capture"
-        ? `${CONTEXT_INSTRUCTIONS}\n${CONTEXT_INSTRUCTIONS_CAPTURE}`
-        : CONTEXT_INSTRUCTIONS,
-    );
-    return parts.join("\n");
-  }
+  useEffect(() => {
+    loadContext();
+    readContextFile(docFile).then(raw => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) return;
+        const last = parsed[parsed.length - 1];
+        if (last?.ts && isSameCalendarDay(new Date(last.ts), new Date())) {
+          setEntries(parsed);
+        }
+      } catch { /* start fresh */ }
+    });
+  }, [loadContext]);
 
   function showToast(msg) {
     setToast(msg);
@@ -179,279 +243,346 @@ function useThread(storageKey, systemPromptBase, contextMode = "chat") {
     if (!updates.length) return;
     const updated = [];
     for (const { file, content, mode } of updates) {
+      if (mode === "append" && file === "log.md") {
+        const cur = await readContextFile(file);
+        const piece = content.trim();
+        if (piece && cur.endsWith(piece)) continue;
+      }
       const ok = await writeContextFile(file, content, mode);
       if (ok) updated.push(file);
     }
     if (updated.length) {
       await loadContext();
-      showToast(`updated: ${updated.join(", ")}`);
+      showToast(`updated: ${[...new Set(updated)].join(", ")}`);
+    }
+  }
+
+  function buildSystemPrompt(slot) {
+    const parts = [PROMPT_MAP[slot] || PROMPT_MAP.morning];
+    if (ctx.context) parts.push(`\n## Personal context\n${ctx.context}`);
+    if (ctx.now)     parts.push(`\n## Current sprint (now.md)\n${ctx.now}`);
+    if (ctx.log)     parts.push(`\n## Log (log.md)\n${ctx.log}`);
+    parts.push(CONTEXT_INSTRUCTIONS);
+    return parts.join("\n");
+  }
+
+  function submit(text) {
+    const content = text.trim();
+    if (!content || loading) return;
+    const slot = getTimeSlot(new Date().getHours());
+    const entry = { slot, text: content, ts: Date.now(), response: null };
+    const next = [...entries, entry];
+    setEntries(next);
+    setLoading(true);
+
+    const messages = next
+      .filter(e => e.text)
+      .flatMap(e => {
+        const out = [{ role: "user", content: e.text }];
+        if (e.response) out.push({ role: "assistant", content: e.response });
+        return out;
+      });
+
+    callClaude(buildSystemPrompt(slot), messages, async (raw) => {
+      try {
+        const { displayText, updates } = parseResponse(raw);
+        const final = next.map((e, i) =>
+          i === next.length - 1 ? { ...e, response: displayText } : e
+        );
+        setEntries(final);
+        await writeContextFile(docFile, JSON.stringify(final), "replace");
+        await handleUpdates(updates);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }
+
+  return { entries, submit, loading, toast };
+}
+
+// ── Daily record helpers ──────────────────────────────────────────────────────
+
+function getTodayLogEntries(logContent, today = new Date()) {
+  if (!logContent) return [];
+  // Match on "D Month YYYY" only — ignores weekday so a mismatch won't break it
+  const datePart = today.toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+  const lines = logContent.split("\n");
+  const entries = [];
+  let capturing = false;
+  let current = [];
+  for (const line of lines) {
+    if (line.startsWith("### ")) {
+      if (capturing && current.length) entries.push(current.join("\n").trim());
+      capturing = line.includes(datePart);
+      current = [];
+    } else if (capturing) {
+      current.push(line);
+    }
+  }
+  if (capturing && current.length) entries.push(current.join("\n").trim());
+  return entries.filter(e => e.length > 0);
+}
+
+// ── DayView — daily log entries ───────────────────────────────────────────────
+
+function DayView() {
+  const [entries, setEntries] = useState([]);
+  const [ready, setReady] = useState(false);
+
+  const load = useCallback(async () => {
+    const log = await readContextFile("log.md");
+    setEntries(getTodayLogEntries(log, new Date()));
+    setReady(true);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      {!ready && (
+        <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0 }}>···</p>
+      )}
+
+      {ready && entries.length === 0 && (
+        <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0, fontStyle: "italic" }}>
+          nothing logged yet today.
+        </p>
+      )}
+
+      {entries.map((entry, i) => (
+        <div key={i} style={{ marginBottom: "1.1rem" }}>
+          {i > 0 && <div style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", margin: "0 0 0.9rem" }} />}
+          <div style={{ fontSize: 13, lineHeight: 1.65, color: "var(--color-text-primary)", fontFamily: "var(--sa-chat-font)" }}>
+            <AssistantMarkdown>{entry}</AssistantMarkdown>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Typing animation ──────────────────────────────────────────────────────────
+
+function useTypingEffect(text, speed = 14) {
+  const [displayed, setDisplayed] = useState(text || "");
+  const [done, setDone] = useState(true);
+  const prevRef = useRef(text);
+  const mountRef = useRef(false);
+
+  useEffect(() => {
+    if (!mountRef.current) {
+      mountRef.current = true;
+      prevRef.current = text;
+      setDisplayed(text || "");
+      setDone(true);
+      return;
+    }
+    if (text === prevRef.current) return;
+    prevRef.current = text;
+    if (!text) { setDisplayed(""); setDone(true); return; }
+
+    setDone(false);
+    let i = 0;
+    setDisplayed("");
+    const id = setInterval(() => {
+      i += 1 + Math.floor(Math.random() * 2);
+      if (i >= text.length) { i = text.length; clearInterval(id); setDone(true); }
+      setDisplayed(text.slice(0, i));
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed]);
+
+  return { displayed, done };
+}
+
+// ── ChatView — bubbles ────────────────────────────────────────────────────────
+
+function ChatView({ entries, submit, loading, currentSlot, toast }) {
+  const [draft, setDraft] = useState("");
+  const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const lastEntry = entries[entries.length - 1];
+  const lastResponse = lastEntry?.response || null;
+  const { displayed: typedResponse, done: typingDone } = useTypingEffect(lastResponse);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [entries, typedResponse, loading]);
+
+  useEffect(() => {
+    if (textareaRef.current) textareaRef.current.focus();
+  }, [currentSlot]);
+
+  function handleKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
     }
   }
 
   function send() {
-    const content = input.trim();
-    if (!content || loading) return;
-    const userMsg = { role: "user", content, ts: Date.now() };
-    const newThread = [...thread, userMsg];
-    setThread(newThread);
-    setInput("");
-    setLoading(true);
-
-    const apiMessages = newThread.map(({ role, content }) => ({ role, content }));
-    callClaude(buildSystemPrompt(), apiMessages, async (raw) => {
-      const { displayText, updates } = parseResponse(raw);
-      const assistantMsg = { role: "assistant", content: displayText, ts: Date.now() };
-      const final = [...newThread, assistantMsg];
-      setThread(final);
-      localStorage.setItem(storageKey, JSON.stringify(final));
-      setLoading(false);
-      await handleUpdates(updates);
+    const t = draft.trim();
+    if (!t || loading) return;
+    submit(t);
+    setDraft("");
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) { el.style.height = "auto"; autoGrow(el); }
     });
   }
 
-  return { thread, input, setInput, loading, toast, send };
-}
-
-// ── ChatThread — for morning / focus / evening ────────────────────────────────
-// Fixed-height layout: messages scroll inside a container, input always pinned.
-
-function ChatThread({ storageKey, systemPromptBase, placeholder = "what's on your mind." }) {
-  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase, "chat");
-  const containerRef = useRef(null);
-
-  // Scroll the messages container (not the page) to the bottom on every update.
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [thread, loading]);
-
-  function handleKey(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  function autoGrow(el) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
   }
+
+  const canSend = draft.trim().length > 0 && !loading;
 
   return (
-    <div className="sa-chat">
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      {/* Messages */}
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 0 1rem" }}>
+        {entries.map((entry, i) => {
+          const isLast = i === entries.length - 1;
+          const responseText = isLast && !typingDone ? typedResponse : entry.response;
+          const showCursor = isLast && !typingDone;
 
-      <div ref={containerRef} className="sa-chat__messages">
-        {thread.map((msg, i) => (
-          <div key={i} className="sa-chat__row">
-            {msg.role === "user" ? (
-              <p className="sa-chat__user">{msg.content}</p>
-            ) : (
-              <div className="sa-chat__assistant">
-                <AssistantMarkdown>{msg.content}</AssistantMarkdown>
-                {msg.ts && (
-                  <p className="sa-chat__meta">{formatTime(msg.ts)}</p>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-
-        {loading && (
-          <div className="sa-chat__row">
-            <div className="sa-chat__assistant">
-              <p className="sa-chat__loading">···</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="sa-chat__composer">
-        <div className="sa-chat__field">
-          <textarea
-            rows={2}
-            className="sa-chat__textarea"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder={placeholder}
-          />
-          <button type="button" className="sa-chat__send" onClick={send} disabled={loading}>
-            ↵
-          </button>
-        </div>
-        {toast && (
-          <p className="sa-chat__toast">{toast}</p>
-        )}
-      </div>
-
-    </div>
-  );
-}
-
-// ── LogThread — for + / quick capture ────────────────────────────────────────
-// Field Notes strip: "14:23 — capture text. — *ack.*"  (single subdued line)
-
-function LogThread({ storageKey, systemPromptBase, placeholder = "what just happened." }) {
-  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase, "capture");
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [thread, loading]);
-
-  const pairs = [];
-  for (let i = 0; i < thread.length; i++) {
-    if (thread[i].role === "user") {
-      const next = thread[i + 1];
-      const hasAssistant = next?.role === "assistant";
-      pairs.push({ user: thread[i], assistant: hasAssistant ? next : null });
-      if (hasAssistant) i++;
-    }
-  }
-
-  const lastIdx = pairs.length - 1;
-
-  function handleKey(e) {
-    if (e.key === "Enter") { e.preventDefault(); send(); }
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-
-      <div ref={containerRef} style={{ flex: 1, overflowY: "auto", minHeight: 0, paddingRight: 2 }}>
-        {pairs.map((pair, i) => {
-          const isLatest = i === lastIdx;
-          const pendingAck = loading && isLatest && !pair.assistant;
           return (
-            <div
-              key={i}
-              style={{
-                padding: "0.45rem 0",
-                borderBottom: "0.5px solid var(--color-border-tertiary)",
-                fontSize: 13,
-                lineHeight: 1.55,
-                color: "var(--color-text-primary)",
-                wordBreak: "break-word",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              <span style={{ color: "var(--color-text-tertiary)", fontVariantNumeric: "tabular-nums" }}>
-                {formatTime(pair.user.ts)}
-              </span>
-              <span style={{ color: "var(--color-text-tertiary)" }}> — </span>
-              <span style={{ whiteSpace: "pre-wrap" }}>{pair.user.content}</span>
-              {pendingAck && (
-                <>
-                  <span style={{ color: "var(--color-text-tertiary)" }}> — </span>
-                  <em style={{ fontStyle: "italic", color: "var(--color-text-tertiary)" }}>···</em>
-                </>
-              )}
-              {pair.assistant && (
-                <>
-                  <span style={{ color: "var(--color-text-tertiary)" }}> — </span>
-                  <em style={{ fontStyle: "italic", color: "var(--color-text-secondary)" }}>
-                    <InlineMd text={pair.assistant.content} />
-                  </em>
-                </>
+            <div key={i}>
+              {/* User bubble */}
+              <div className="sa-bubble sa-bubble--user">
+                <p>{entry.text}</p>
+                <span className="sa-bubble__time">{formatTime(entry.ts)} · {entry.slot}</span>
+              </div>
+
+              {/* Assistant bubble */}
+              {responseText && (
+                <div className="sa-bubble sa-bubble--assistant">
+                  {showCursor ? (
+                    <p className="sa-bubble__typing">
+                      {responseText}
+                      <span className="sa-cursor" />
+                    </p>
+                  ) : (
+                    <AssistantMarkdown>{responseText}</AssistantMarkdown>
+                  )}
+                </div>
               )}
             </div>
           );
         })}
-      </div>
 
-      <div style={{ flexShrink: 0, borderTop: "0.5px solid var(--color-border-tertiary)", paddingTop: "0.75rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder={placeholder}
-            disabled={loading}
-            style={{
-              flex: 1, border: "none", outline: "none",
-              borderBottom: "0.5px solid var(--color-border-secondary)",
-              background: "transparent", padding: "4px 0 6px",
-              fontFamily: "var(--font-sans)", fontSize: 13,
-              lineHeight: 1.5, color: "var(--color-text-primary)",
-            }}
-          />
-          <button onClick={send} disabled={loading} style={{ ...ghostBtn, border: "none", padding: "4px 8px", fontSize: 16, opacity: loading ? 0.35 : 1 }}>
-            ↵
-          </button>
-        </div>
-        {toast && (
-          <p style={{ fontSize: 11, color: "var(--color-text-success)", margin: "8px 0 0", letterSpacing: "0.04em" }}>
-            {toast}
-          </p>
+        {loading && !lastResponse && (
+          <div className="sa-bubble sa-bubble--assistant">
+            <p style={{ color: "var(--color-text-tertiary)", margin: 0, fontSize: 13 }}>···</p>
+          </div>
         )}
       </div>
 
+      {/* Toast */}
+      {toast && (
+        <p style={{ fontSize: 11, color: "var(--color-text-success)", padding: "0 0 0.5rem", letterSpacing: "0.04em" }}>
+          {toast}
+        </p>
+      )}
+
+      {/* Composer */}
+      <div style={{ flexShrink: 0, padding: "0.75rem 0 1rem" }}>
+        <div className="sa-composer">
+          <textarea
+            ref={textareaRef}
+            className="sa-chat__textarea"
+            rows={1}
+            value={draft}
+            onChange={e => { setDraft(e.target.value); autoGrow(e.target); }}
+            onKeyDown={handleKey}
+            placeholder={PLACEHOLDER_MAP[currentSlot] || "write."}
+          />
+          <button
+            type="button"
+            className="sa-composer__send"
+            onClick={send}
+            disabled={!canSend}
+            aria-label="Send message"
+            title="Send (Enter)"
+          >
+            ↵
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Views ─────────────────────────────────────────────────────────────────────
+// ── Debug panel (logged entries only) ─────────────────────────────────────────
 
-function MorningView() {
+function DebugPanel({ onClose }) {
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-    <ChatThread
-      storageKey="sa_morning_thread"
-      placeholder="whatever's on your mind. no filter."
-      systemPromptBase={`You are a calm, grounding presence in Studio Ash, a personal daily companion.
-The user is doing their morning pages — freewriting to replace scrolling with reflection.
-Respond briefly (2-4 sentences). Notice if their wheels are spinning or they're trying to do too much.
-Be warm, honest, and grounding. Gently surface any to-dos buried in the writing.
-Don't be a productivity coach — be a thoughtful presence.
-Keep responses concise unless asked to expand.`}
-    />
-    </div>
-  );
-}
-
-function FocusView() {
-  return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-    <ChatThread
-      storageKey="sa_focus_thread"
-      placeholder="dump everything. tasks, ideas, what's been on your mind."
-      systemPromptBase={`You are a focused, practical assistant in Studio Ash.
-The user is transitioning into their work block. They're brain-dumping tasks, ideas, and to-dos.
-Help them get into flow. Break their dump into a clear, realistic plan. Be concise. Prioritize ruthlessly.
-Cross-reference with their sprint context (now.md) when relevant. When they name new tasks or completions, keep now.md in sync via the context-file rules—they should not have to ask you to log it.
-Keep responses concise unless asked to expand.`}
-    />
-    </div>
-  );
-}
-
-function EveningView() {
-  return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-    <ChatThread
-      storageKey="sa_evening_thread"
-      placeholder="what worked. what moved. what to let go of."
-      systemPromptBase={`You are a warm, reflective presence in Studio Ash, a personal daily companion.
-It's the end of the user's workday. They're closing out the day.
-After their reflection, respond with:
-1. A brief (2-3 sentence) insight about the day — patterns, progress, what stood out
-2. 2-3 gentle suggestions for winding down (not productivity tips — actual rest)
-3. One thing worth carrying into tomorrow
-Be warm and human. Keep follow-up responses concise.`}
-    />
-    </div>
-  );
-}
-
-function PlusView() {
-  return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-    <LogThread
-      storageKey="sa_plus_thread"
-      placeholder="what just happened."
-      systemPromptBase={`You are a quiet line in a Field Notes log — not a chat partner.
-The user writes quick captures: thoughts, events, decisions, one-liners.
-Your entire reply must be ONE short clause (roughly under 100 characters): lowercase, no paragraph breaks, no bullets, no markdown, no numbered lists.
-Tone: spare, handwritten margin-note. Examples: "noted." / "worth tracking." / "flag for tomorrow." / "heavy — breathe first."
-If they mention a task or decision, acknowledge it in that same clipped register.
-Never write more than one sentence.`}
-    />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sa-debug-logged-label"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 100,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        padding: "0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom))",
+        background: "var(--color-bg)",
+        boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.06)",
+      }}
+    >
+      <div style={{
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        marginBottom: "1rem",
+        padding: "10px 12px",
+        borderRadius: "var(--sa-composer-radius, 10px)",
+        background: "var(--color-bg-panel)",
+        border: "0.5px solid var(--color-border-tertiary)",
+      }}>
+        <p
+          id="sa-debug-logged-label"
+          style={{
+            fontSize: 10, fontWeight: 500, color: "var(--color-text-tertiary)",
+            margin: 0, letterSpacing: "0.06em", textTransform: "uppercase",
+          }}
+        >logged</p>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            marginLeft: "auto", fontSize: 10, background: "transparent",
+            border: "none", cursor: "pointer", color: "var(--color-text-tertiary)",
+            fontFamily: "var(--sa-chat-font)", letterSpacing: "0.04em", padding: "4px 0",
+          }}
+        >close</button>
+      </div>
+      <div style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        padding: "12px 14px 16px",
+        borderRadius: "var(--sa-composer-radius, 10px)",
+        background: "var(--color-bg-panel)",
+        border: "0.5px solid var(--color-border-tertiary)",
+      }}>
+        <DayView />
+      </div>
     </div>
   );
 }
@@ -465,109 +596,79 @@ export default function StudioAsh() {
     return () => clearInterval(id);
   }, []);
 
-  const hour = now.getHours();
-  const [view, setView] = useState(getTimeSlot(hour));
-  const [navOpen, setNavOpen] = useState(false);
-  const [plusOpen, setPlusOpen] = useState(false);
-  const currentLabel = VIEWS.find(v => v.id === view)?.label || view;
+  const currentSlot = getTimeSlot(now.getHours());
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
+  const { entries, submit, loading, toast } = useDocument();
+  const [debugOpen, setDebugOpen] = useState(false);
+  const longPressRef = useRef(null);
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+        e.preventDefault();
+        setDebugOpen(d => !d);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function onWordmarkDown() {
+    longPressRef.current = setTimeout(() => setDebugOpen(d => !d), 600);
+  }
+  function onWordmarkUp() { clearTimeout(longPressRef.current); }
+
   return (
-    <div style={{
-      maxWidth: 480,
-      margin: "0 auto",
-      padding: "2rem 1.25rem 1.5rem",
-      fontFamily: "var(--font-sans)",
-      height: "100svh",
-      display: "flex",
-      flexDirection: "column",
-      boxSizing: "border-box",
-    }}>
+    <div
+      id="studio-ash-root"
+      style={{
+        maxWidth: "var(--sa-max-width)",
+        margin: "0 auto",
+        padding: "2rem 1.25rem 0",
+        fontFamily: "var(--sa-chat-font)",
+        height: "100svh",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+        position: "relative",
+      }}
+    >
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexShrink: 0 }}>
-        <div>
-          <p style={{
+      <div style={{ marginBottom: "1.5rem", flexShrink: 0 }}>
+        <p
+          onPointerDown={onWordmarkDown}
+          onPointerUp={onWordmarkUp}
+          onPointerLeave={onWordmarkUp}
+          style={{
             fontFamily: "var(--font-logo)",
-            fontSize: 10,
+            fontSize: 26,
             fontWeight: 700,
             color: "var(--color-text-primary)",
             margin: "0 0 4px",
             letterSpacing: "0.045em",
             textTransform: "uppercase",
-          }}>Studio Ash</p>
-          <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0, fontFamily: "var(--font-sans)" }}>
-            {formatDate(now)}
-            <span style={{ marginLeft: 10, color: "var(--color-text-tertiary)" }}>{timeStr}</span>
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <button
-            onClick={() => { setPlusOpen(o => !o); setNavOpen(false); }}
-            style={{ ...ghostBtn, border: "0.5px solid var(--color-border-tertiary)", color: plusOpen ? "var(--color-text-primary)" : "var(--color-text-tertiary)" }}
-          >+</button>
-          <button
-            onClick={() => { setNavOpen(o => !o); setPlusOpen(false); }}
-            style={{ ...ghostBtn, border: "0.5px solid var(--color-border-tertiary)" }}
-          >
-            {navOpen ? "close" : `${currentLabel} ···`}
-          </button>
-        </div>
+            cursor: "default",
+            userSelect: "none",
+          }}
+        >Ash.</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>
+          {formatDate(now)}
+          <span style={{ marginLeft: 10, color: "var(--color-text-tertiary)" }}>{timeStr}</span>
+        </p>
       </div>
 
-      {plusOpen && (
-        <div style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          border: "1px solid var(--color-border-secondary)",
-          borderRadius: 12,
-          padding: "14px 16px",
-          background: "var(--color-background-panel)",
-          boxSizing: "border-box",
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-tertiary)", margin: "0 0 1rem", letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>+</p>
-          <PlusView />
-        </div>
-      )}
+      {/* Chat */}
+      <ChatView
+        entries={entries}
+        submit={submit}
+        loading={loading}
+        currentSlot={currentSlot}
+        toast={toast}
+      />
 
-      {navOpen && (
-        <div style={{ marginBottom: "2rem", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 8, overflow: "hidden" }}>
-          {VIEWS.map((v, i) => (
-            <button key={v.id} onClick={() => { setView(v.id); setNavOpen(false); }} style={{
-              display: "block", width: "100%", textAlign: "left", fontSize: 13,
-              padding: "9px 14px", border: "none",
-              borderBottom: i < VIEWS.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none",
-              background: view === v.id ? "var(--color-background-secondary)" : "transparent",
-              color: view === v.id ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-              cursor: "pointer", fontFamily: "var(--font-sans)",
-              fontWeight: view === v.id ? 500 : 400,
-            }}>{v.label}</button>
-          ))}
-        </div>
-      )}
-
-      {!navOpen && !plusOpen && (
-        <div style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          border: "1px solid var(--color-border-secondary)",
-          borderRadius: 12,
-          padding: "14px 16px",
-          background: "var(--color-background-panel)",
-          boxSizing: "border-box",
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-tertiary)", margin: "0 0 1.25rem", letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>
-            {currentLabel}
-          </p>
-          {view === "morning" && <MorningView />}
-          {view === "focus"   && <FocusView />}
-          {view === "evening" && <EveningView />}
-        </div>
-      )}
+      {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} />}
 
     </div>
   );

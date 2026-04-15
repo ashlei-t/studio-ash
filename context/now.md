@@ -1,62 +1,61 @@
-# now
-future past present crafting oriented 
-last updated: April 16 2026
-season: Spring
+# now.md
+> this week + this season — operational and directional in one place
+> refresh weekly (Sunday), review seasonally (end of June)
 
-## current focus
-June 21 store launch — three CRI card games on Shopify subdomain.
-All three games confirmed ready by HeroTime (Jerick and Moris) on April 14.
+---
 
-## active projects
+## season — spring 2026
+*March → June 2026*
 
-### CRI product launch
-- [x] All three games confirmed ready — HeroTime (Jerick and Moris), April 14
-- [ ] PrimeShip (Cindy) notified to coordinate pickup with Jerick and Moris
-- [ ] Confirm ocean freight pickup timeline with Cindy
-- [ ] Shopify store — set up pre-order waitlist (store is otherwise in good shape)
-- [ ] Email marketing tool — leaning Brevo (Tim's existing setup), need to confirm paid credits
-- [ ] Email campaign — time-sensitive, in progress
-- [ ] Video — Play: The Good Life Game
-- [ ] Marketing materials across all three products
+**theme: build**
+Build with hands (planter, pergola, terrace). Build with code (Studio Ash, Wisdom Map).
+Build the COO version of myself. Build consistency through the energy dips.
 
-### Wisdom Map app
-- Working HTML/JS prototype exists — cinematic SVG camera system, mountain scene
-- CRI brand assets integrated (CoFo Holz Light, Kobe Bold fonts)
-- Palette: Fog, Cerulean, Olive, Dusk, Midnight, Forest, Rose, Apricot, Skyblue, Pistachio, Lilac, Sand
-- Scoped as companion to Play: The Good Life Game
-- On pause due to launch prep — picking back up soon
+**the question for this season:** what does it feel like to finish something?
 
-### Studio Ash
-- Personal daily planning and reflection tool — built in React with Vite
-- Running locally at localhost:5173
-- Context system: context.md, now.md, log.md
-- Next: wire up Anthropic API for live AI interaction
-- [ ] Fix morning pages prompts
-- [ ] Deploy somewhere shareable
+**season goals**
+- [ ] June 21 CRI launch — all three games live
+- [ ] Studio Ash running as a real daily habit
+- [ ] Planter boxes built, pergola scoped
+- [ ] Boxing consistency maintained through the season
+- [ ] Measurable Spanish progress
 
-### CRI web presence
-- playthegoodlife.game — Obsidian Publish site — LIVE, Tim making edits
-- reflectiveintelligence.org (Squarespace) — updated, pausing further work until after spring break
+---
 
-## open loops
-- Email marketing tool decision — Brevo top-up vs. alternative
+## week of April 14 2026
+
+**intention:** Get Studio Ash running with the API. Ship Shopify pre-order waitlist.
+
+### CRI — active
+- [x] All three games confirmed ready — HeroTime (Jerick + Moris), April 14
+- [x] PrimeShip (Cindy) notified to coordinate pickup
+- [ ] Confirm ocean freight timeline with Cindy
+- [ ] Shopify pre-order waitlist — set up and live
+- [ ] Email marketing tool — decision needed
+- [ ] Marketing materials — all three products
+
+### open loops
 - Xero setup
-- School district sales — purchase order and vendor registration requirements
-- Zoho Books for inventory and invoicing (introduced by Tim)
 
-## waiting on
-- Cindy (PrimeShip) — freight pickup coordination with Jerick and Moris
-- Eric (MOCO) — fulfillment warehouse readiness
+### waiting on
+- Cindy (PrimeShip) — freight pickup confirmation update to timeline
+- Eric (MOCO) — warehouse readiness
 
-## this week
-- Tim sync: Monday and Wednesday at 4pm
-- Spring break starts after this week — no CRI work all next week
-- House prep for guests — Daniela's family visiting next week
-- [ ] Build pergola
-- [ ] Get soil
-- [ ] Install blinds
-- [ ] Organize and prepare house for guests
+### tim sync prep — Mon + Wed 4pm
+- Games confirmed ready April 14
+- PrimeShip coordinating pickup
 
-## aspirations
+### personal
+- [ ] Get milk
+- Studio Ash: plan vision and design before next build session
+- Studio Ash: fix pending design changes (noted end of day Wed)
+- Pokebudz: find a window to start deployment
+- Terrace: planter box materials from Leroy Merlin
+- Pre-family visit: grocery shopping
+- Pre-family visit: clean / create space in living room
 
-## 
+---
+
+## sunday review
+*What worked? What didn't? What carries forward?*
+→

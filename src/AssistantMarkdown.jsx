@@ -18,35 +18,3 @@ export function AssistantMarkdown({ children }) {
     </div>
   );
 }
-
-/** Minimal inline emphasis for + log acknowledgments (one line, no block tags) */
-export function InlineMd({ text }) {
-  if (!text) return null;
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-      return (
-        <strong key={i} style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-      return (
-        <code
-          key={i}
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "0.88em",
-            background: "var(--color-background-secondary)",
-            padding: "0 0.25em",
-            borderRadius: 3,
-          }}
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
