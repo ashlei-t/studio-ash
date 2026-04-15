@@ -29,6 +29,40 @@
   --color-background-panel: #faf8f4;
   --color-accent: #6b5344;
 
+  /*
+   * Chat area (morning / focus / evening) — spacing & fonts
+   * All consumed by `.sa-chat*` rules below; tweak here only.
+   */
+  --sa-chat-scroll-pad-x: 0;
+  --sa-chat-row-pad-y: 0.55rem;
+  --sa-chat-row-border: 0.5px solid var(--color-border-tertiary);
+  --sa-chat-user-size: 14px;
+  --sa-chat-user-line: 1.7;
+  --sa-chat-user-font: var(--font-user);
+  --sa-chat-assistant-bar: 2px solid var(--color-border-accent);
+  --sa-chat-assistant-pl: 12px;
+  --sa-chat-meta-size: 11px;
+  --sa-chat-meta-mt: 6px;
+  --sa-chat-meta-font: var(--font-user);
+  --sa-chat-loading-size: 13px;
+  --sa-chat-loading-font: var(--font-sans);
+  --sa-chat-composer-border-t: 0.5px solid var(--color-border-tertiary);
+  --sa-chat-composer-pt: 0.75rem;
+  --sa-chat-composer-gap: 8px;
+  --sa-chat-input-border-b: 0.5px solid var(--color-border-secondary);
+  --sa-chat-input-pad-y: 4px 0 6px;
+  --sa-chat-input-size: 14px;
+  --sa-chat-input-line: 1.7;
+  --sa-chat-input-font: var(--font-sans);
+  --sa-chat-send-size: 16px;
+  --sa-chat-send-pad: 4px 8px;
+  --sa-chat-toast-size: 11px;
+  --sa-chat-toast-mt: 8px;
+  /* Assistant markdown inside the thread (overrides global `.sa-md` here only) */
+  --sa-chat-md-size: 13px;
+  --sa-chat-md-line: 1.75;
+  --sa-chat-md-font: var(--font-sans);
+
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light;
@@ -250,4 +284,113 @@ code {
   font-family: var(--font-sans);
   font-weight: 600;
   color: var(--color-text-primary);
+}
+
+/* ── Chat thread (StudioAsh ChatThread) ────────────────────────────────────────
+   Layout is flex column: scrollable messages, pinned composer.
+   Tokens live under `:root` (--sa-chat-*). */
+
+.sa-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.sa-chat__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-left: var(--sa-chat-scroll-pad-x);
+  padding-right: var(--sa-chat-scroll-pad-x);
+}
+
+.sa-chat__row {
+  padding: var(--sa-chat-row-pad-y) 0;
+  border-bottom: var(--sa-chat-row-border);
+}
+
+.sa-chat__user {
+  margin: 0;
+  font-family: var(--sa-chat-user-font);
+  font-size: var(--sa-chat-user-size);
+  line-height: var(--sa-chat-user-line);
+  white-space: pre-wrap;
+  color: var(--color-text-primary);
+}
+
+.sa-chat__assistant {
+  border-left: var(--sa-chat-assistant-bar);
+  padding-left: var(--sa-chat-assistant-pl);
+}
+
+.sa-chat__assistant .sa-md {
+  font-family: var(--sa-chat-md-font);
+  font-size: var(--sa-chat-md-size);
+  line-height: var(--sa-chat-md-line);
+}
+
+.sa-chat__meta {
+  margin: var(--sa-chat-meta-mt) 0 0;
+  font-family: var(--sa-chat-meta-font);
+  font-size: var(--sa-chat-meta-size);
+  color: var(--color-text-tertiary);
+}
+
+.sa-chat__loading {
+  margin: 0;
+  font-family: var(--sa-chat-loading-font);
+  font-size: var(--sa-chat-loading-size);
+  color: var(--color-text-tertiary);
+}
+
+.sa-chat__composer {
+  flex-shrink: 0;
+  border-top: var(--sa-chat-composer-border-t);
+  padding-top: var(--sa-chat-composer-pt);
+}
+
+.sa-chat__field {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sa-chat-composer-gap);
+}
+
+.sa-chat__textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  border-bottom: var(--sa-chat-input-border-b);
+  background: transparent;
+  padding: var(--sa-chat-input-pad-y);
+  font-family: var(--sa-chat-input-font);
+  font-size: var(--sa-chat-input-size);
+  line-height: var(--sa-chat-input-line);
+  color: var(--color-text-primary);
+}
+
+.sa-chat__send {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: var(--sa-chat-send-size);
+  line-height: 1;
+  padding: var(--sa-chat-send-pad);
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+}
+
+.sa-chat__send:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.sa-chat__toast {
+  margin: var(--sa-chat-toast-mt) 0 0;
+  font-size: var(--sa-chat-toast-size);
+  color: var(--color-text-success);
+  letter-spacing: 0.04em;
 }

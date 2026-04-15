@@ -92,34 +92,52 @@ function parseResponse(text) {
 // ── Context instructions ──────────────────────────────────────────────────────
 
 const CONTEXT_INSTRUCTIONS = `
-## Updating context files
+## Context files (silent updates)
 
-When the user explicitly asks you to update a file, include ONE OR MORE structured blocks in your response.
-The blocks are silently processed and stripped from your visible reply.
+You may end your reply with structured blocks. They are applied by the app and **removed** before the user sees your message. The user should **never** need to say "log this", "put that in now.md", or "update context"—infer from what they said.
 
-To APPEND a new entry to log.md:
+### now.md — running tasks & sprint (their to-do list)
+- Treat the latest **now.md** in this prompt as the source of truth. They will ask you later to turn it into a **flow or schedule**; keep it accurate as you go.
+- When they mention a **new** obligation, follow-up, deadline, or phrasing like "I need to…", "remind me to…", "still have to…", add it (usually as an unchecked \`- [ ]\` line in the right section, matching their existing style).
+- When they clearly **completed**, **cancelled**, or **delegated** something that still appears open in now.md, mark it \`- [x]\` or remove it—whichever fits how they write the file.
+- Use **replace** with the **entire** updated file: copy the current now.md, change only what this conversation implies, and preserve everything else (headings, sections, unrelated projects).
+- If nothing in now.md should change this turn, omit the now.md block.
+
+### log.md — dated day notes
+- **append** a short dated entry when something **worth remembering** happened: a decision, milestone, emotional beat, or "how the day went"—not every reply.
+
+### context.md — slow-moving background
+- **replace** with the full file only when **durable facts** shift: projects, people, tools, preferences, constraints. Day-to-day tasks belong in now.md, not here.
+
+### Block syntax (exactly this shape)
+
+Append to log.md:
 ---UPDATE:log.md:append---
 ### [Weekday, D Month YYYY]
-[1–4 sentence summary of what happened or was decided today]
+[1–4 sentences]
 ---END---
 
-To REPLACE the full content of now.md (use the complete file content):
+Replace now.md (full file body):
 ---UPDATE:now.md:replace---
-[full updated now.md content, reflecting any new tasks, completions, or changes]
+[complete merged now.md]
 ---END---
 
-To REPLACE the full content of context.md (use the complete file content):
+Replace context.md (full file body):
 ---UPDATE:context.md:replace---
-[full updated context.md content]
+[complete merged context.md]
 ---END---
 
-Only include update blocks when the user explicitly asks ("update log", "mark that done in now.md", "log this", etc.).
-Never emit partial or malformed blocks.
+Never emit partial or malformed blocks. Use separate blocks if more than one file changes.
+`;
+
+const CONTEXT_INSTRUCTIONS_CAPTURE = `
+### + quick-capture thread (this mode)
+Your visible reply stays **one short clause**. You may place silent update blocks **after** that clause (the app strips them). Prefer a single \`log.md\` **append** for a same-day note. Use \`now.md\` **replace** only when the line is clearly a new task, a completion, or a correction to their list—merge minimally from the now.md you already have in context.
 `;
 
 // ── Shared hook for context + API ─────────────────────────────────────────────
 
-function useThread(storageKey, systemPromptBase) {
+function useThread(storageKey, systemPromptBase, contextMode = "chat") {
   const [thread, setThread] = useState(() => {
     try { return JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { return []; }
   });
@@ -144,7 +162,11 @@ function useThread(storageKey, systemPromptBase) {
     if (ctx.context) parts.push(`\n## Personal context\n${ctx.context}`);
     if (ctx.now)     parts.push(`\n## Current sprint (now.md)\n${ctx.now}`);
     if (ctx.log)     parts.push(`\n## Log (log.md)\n${ctx.log}`);
-    parts.push(CONTEXT_INSTRUCTIONS);
+    parts.push(
+      contextMode === "capture"
+        ? `${CONTEXT_INSTRUCTIONS}\n${CONTEXT_INSTRUCTIONS_CAPTURE}`
+        : CONTEXT_INSTRUCTIONS,
+    );
     return parts.join("\n");
   }
 
@@ -194,7 +216,7 @@ function useThread(storageKey, systemPromptBase) {
 // Fixed-height layout: messages scroll inside a container, input always pinned.
 
 function ChatThread({ storageKey, systemPromptBase, placeholder = "what's on your mind." }) {
-  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase);
+  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase, "chat");
   const containerRef = useRef(null);
 
   // Scroll the messages container (not the page) to the bottom on every update.
@@ -209,22 +231,18 @@ function ChatThread({ storageKey, systemPromptBase, placeholder = "what's on you
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <div className="sa-chat">
 
-      <div ref={containerRef} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      <div ref={containerRef} className="sa-chat__messages">
         {thread.map((msg, i) => (
-          <div key={i} style={{ padding: "0.55rem 0", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
+          <div key={i} className="sa-chat__row">
             {msg.role === "user" ? (
-              <p style={{ fontSize: 14, margin: 0, lineHeight: 1.7, whiteSpace: "pre-wrap", color: "var(--color-text-primary)", fontFamily: "var(--font-user)" }}>
-                {msg.content}
-              </p>
+              <p className="sa-chat__user">{msg.content}</p>
             ) : (
-              <div style={{ borderLeft: "2px solid var(--color-border-accent)", paddingLeft: 12 }}>
+              <div className="sa-chat__assistant">
                 <AssistantMarkdown>{msg.content}</AssistantMarkdown>
                 {msg.ts && (
-                  <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: "6px 0 0", fontFamily: "var(--font-user)" }}>
-                    {formatTime(msg.ts)}
-                  </p>
+                  <p className="sa-chat__meta">{formatTime(msg.ts)}</p>
                 )}
               </div>
             )}
@@ -232,38 +250,30 @@ function ChatThread({ storageKey, systemPromptBase, placeholder = "what's on you
         ))}
 
         {loading && (
-          <div style={{ padding: "0.55rem 0", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-            <div style={{ borderLeft: "2px solid var(--color-border-accent)", paddingLeft: 12 }}>
-              <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0, fontFamily: "var(--font-sans)" }}>···</p>
+          <div className="sa-chat__row">
+            <div className="sa-chat__assistant">
+              <p className="sa-chat__loading">···</p>
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ flexShrink: 0, borderTop: "0.5px solid var(--color-border-tertiary)", paddingTop: "0.75rem" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+      <div className="sa-chat__composer">
+        <div className="sa-chat__field">
           <textarea
             rows={2}
+            className="sa-chat__textarea"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
             placeholder={placeholder}
-            style={{
-              flex: 1, resize: "none", border: "none", outline: "none",
-              borderBottom: "0.5px solid var(--color-border-secondary)",
-              background: "transparent", padding: "4px 0 6px",
-              fontFamily: "var(--font-sans)", fontSize: 14,
-              lineHeight: 1.7, color: "var(--color-text-primary)",
-            }}
           />
-          <button onClick={send} disabled={loading} style={{ ...ghostBtn, border: "none", padding: "4px 8px", fontSize: 16, opacity: loading ? 0.35 : 1 }}>
+          <button type="button" className="sa-chat__send" onClick={send} disabled={loading}>
             ↵
           </button>
         </div>
         {toast && (
-          <p style={{ fontSize: 11, color: "var(--color-text-success)", margin: "8px 0 0", letterSpacing: "0.04em" }}>
-            {toast}
-          </p>
+          <p className="sa-chat__toast">{toast}</p>
         )}
       </div>
 
@@ -275,7 +285,7 @@ function ChatThread({ storageKey, systemPromptBase, placeholder = "what's on you
 // Field Notes strip: "14:23 — capture text. — *ack.*"  (single subdued line)
 
 function LogThread({ storageKey, systemPromptBase, placeholder = "what just happened." }) {
-  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase);
+  const { thread, input, setInput, loading, toast, send } = useThread(storageKey, systemPromptBase, "capture");
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -404,7 +414,7 @@ function FocusView() {
       systemPromptBase={`You are a focused, practical assistant in Studio Ash.
 The user is transitioning into their work block. They're brain-dumping tasks, ideas, and to-dos.
 Help them get into flow. Break their dump into a clear, realistic plan. Be concise. Prioritize ruthlessly.
-Cross-reference with their sprint context (now.md) when relevant.
+Cross-reference with their sprint context (now.md) when relevant. When they name new tasks or completions, keep now.md in sync via the context-file rules—they should not have to ask you to log it.
 Keep responses concise unless asked to expand.`}
     />
     </div>

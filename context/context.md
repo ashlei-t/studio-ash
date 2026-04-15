@@ -1,4 +1,5 @@
 # context
+story crafting
 
 ## who i am
 Ash Temeña. COO and designer at the Center for Reflective Intelligence (CRI).
@@ -12,8 +13,8 @@ Previously at Credible Labs and the California Academy of Sciences.
 - Work block starts around 2pm.
 - Tim syncs Mon/Wed at 4pm.
 - I think out loud, iterate quickly, and like things simple and beautiful.
-- ADHD — I work better with clear focus, one thing at a time, low friction systems.
-- I do morning pages (Artists Way style) — freewriting on waking, before screens.
+- I work better with clear focus, one thing at a time, low friction systems.
+- I do morning journaling  — freewriting on waking, before screens.
 
 ## CRI — Center for Reflective Intelligence
 Co-founded by Tim Klein and Dr. Belle Liang (Boston College).
@@ -44,7 +45,7 @@ Tim's working mantra: "Think about it, Talk about it, Be about it"
 - **Basecamp** — project management (Kanban with custom columns)
 - **Shopify** — store at store.reflectiveintelligence.org (product sales)
 - **Xero** — Tim's overarching accounting tool
-- **Email marketing** — TBD, not decided yet
+- **Brevo** — email marketing (Tim has existing account; confirming paid credits)
 - **Figma** — design and illustration
 - **Canva** — worksheets and design assets
 - **Gamma** — slide decks
@@ -61,6 +62,19 @@ Thinking About It → Talking About It → Waiting On It → Being About It → 
 - **Jerick, Moris** — HeroTime, manufacturer contacts
 - **Kyen** — manufacturer contact
 - **Cindy** — PrimeShip, freight contact
+
+## team meeting format (Tim syncs)
+Weekly meeting with Tim follows this structure:
+
+1. **Community Crafter of the Week** — one Story Crafting prompt, one Insight Gathering prompt
+2. **Intention of the Week** — one shared focus or theme
+3. **Good Things Are Happening** — wins, milestones, recognition
+4. **Meetings This Week** — upcoming calls, events, keynotes
+5. **Production Manager Update** — manufacturer/freight/fulfillment status
+6. **Thinkies / Intentions For The Week** — active work items per person (Ash and Tim)
+7. **Business Development Strategy** — standing section:
+   - B2C: Play The Good Life Game → educators → lower price → Ash owns marketing
+   - B2B: The Examina → organizations → higher price → Tim owns sales
 
 ## personal
 - Lives in Barcelona with a rooftop terrace and houseplants

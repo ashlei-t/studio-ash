@@ -1,6 +1,7 @@
 # now
-
-last updated: April 15 2026
+future past present crafting oriented 
+last updated: April 16 2026
+season: Spring
 
 ## current focus
 June 21 store launch — three CRI card games on Shopify subdomain.
@@ -30,6 +31,8 @@ All three games confirmed ready by HeroTime (Jerick and Moris) on April 14.
 - Running locally at localhost:5173
 - Context system: context.md, now.md, log.md
 - Next: wire up Anthropic API for live AI interaction
+- [ ] Fix morning pages prompts
+- [ ] Deploy somewhere shareable
 
 ### CRI web presence
 - playthegoodlife.game — Obsidian Publish site — LIVE, Tim making edits
@@ -47,4 +50,13 @@ All three games confirmed ready by HeroTime (Jerick and Moris) on April 14.
 
 ## this week
 - Tim sync: Monday and Wednesday at 4pm
-- **Spring break starts after this week — no CRI work all next week**
+- Spring break starts after this week — no CRI work all next week
+- House prep for guests — Daniela's family visiting next week
+- [ ] Build pergola
+- [ ] Get soil
+- [ ] Install blinds
+- [ ] Organize and prepare house for guests
+
+## aspirations
+
+## 
