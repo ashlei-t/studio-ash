@@ -18,7 +18,7 @@ May 21-22 first ship date — games arriving at MOCO around May 19. Two to three
 - [x] PrimeShip (Cindy) notified — freight timeline confirmed
 - [x] Ocean freight pickup timeline confirmed with Cindy
 - [x] Shopify = source of truth for inventory (Tim confirmed), Xero mirrors second
-- [ ] Swap 3D mockup assets into website — quick win, do today
+- [x] Swap 3D mockup assets into website
 - [ ] Enter 3 pre-orders into Shopify (ping Eric on Slack to confirm right process first)
 - [ ] Send acknowledgement email to 3 pre-order customers once in Shopify
 - [ ] Shopify pre-order waitlist setup
@@ -57,7 +57,7 @@ May 21-22 first ship date — games arriving at MOCO around May 19. Two to three
 ### CRI web presence
 - playthegoodlife.game — Obsidian Publish site — LIVE, Tim making edits
 - reflectiveintelligence.org (Squarespace) — updated, pausing further work until after launch
-- [ ] Swap 3D mockup assets into website
+- [x] Swap 3D mockup assets into website
 
 ## inventory + fulfillment
 - Shopify = source of truth for inventory (connected to MOCO)
@@ -69,14 +69,13 @@ May 21-22 first ship date — games arriving at MOCO around May 19. Two to three
 - Brevo top-up confirmation
 - Xero setup (mirrors Shopify)
 - School district sales — purchase order and vendor registration requirements
-- Zoho Books for inventory and invoicing (introduced by Tim)
 
 ## waiting on
 - Eric (MOCO) — confirm pre-order entry process + fulfillment workflow readiness
 
 ## this week
 - Tim sync: Thursday (monthly planning)
-- **Today:** swap 3D assets, enter pre-orders into Shopify (ping Eric first)
-- **Tuesday:** branded email template, Examina training Google Form
-- **Wednesday:** breakfast video, website assets if not done
+- **Today:** ✓ swap 3D assets
+- **Tuesday:** branded email template, Examina training Google Form, Spanish class, boxing
+- **Wednesday:** breakfast video, enter pre-orders into Shopify (ping Eric first)
 - **Thursday:** finalize Tim sync agenda before meeting

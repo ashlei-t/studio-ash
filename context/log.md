@@ -29,11 +29,9 @@ Mid-day: In a sync with Tim exploring "Reflective OS" — building internal tool
 End of day: Good energy working on Studio Ash — fun and challenging in equal measure. Noticed the planning gap, wants to map the vision more intentionally before building. Pokebudz deployment still waiting for a window. Pre-family-visit logistics sitting in the back of his head: groceries, living room space. Design changes surfaced right at bedtime — classic end-of-session spiral. Closed the day aware of it.
 ### Thursday, 17 April 2026
 Good day, ended it building — enjoying the app work, hard to stop. Spanish homework undone with class in the morning. Winding down in the flow.
-### Thursday, 17 April 2026
-Good day, ended it building — enjoying the app work, hard to stop. Spanish homework undone with class in the morning. Winding down in the flow.
 ### Friday, 18 April 2026
 Test entry.
 ### Monday, 28 April 2026
 Back from a week off. Calm, grounded re-entry. Freight timeline confirmed — games arrive at MOCO ~May 19, first orders ship May 21-22. Three pre-orders in hand from a Google Form. Plan for the week set: 3D assets and Shopify pre-orders today, email template and Examina waitlist form Tuesday, breakfast video Wednesday, Tim monthly sync Thursday focused on May planning and fulfillment workflow.
 ### Monday, 28 April 2026
-Back from a week off. Calm, grounded re-entry. Freight timeline confirmed — games arrive at MOCO ~May 19, first orders ship May 21-22. Three pre-orders in hand from a Google Form. Plan for the week set: 3D assets and Shopify pre-orders today, email template and Examina waitlist form Tuesday, breakfast video Wednesday, Tim monthly sync Thursday focused on May planning and fulfillment workflow.
+Quiet close to the first day back. Got the 3D assets updated on the website — that's done. Spent some time on Pokebudz which felt good but landed with the honest awareness that it was a detour from CRI work. India flights got thrown into the mix too. Ended the day with Pepper asleep and Daniela nearby — a good place to stop.

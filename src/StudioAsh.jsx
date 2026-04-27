@@ -63,6 +63,10 @@ async function writeContextFile(file, content, mode = "replace") {
   return res.ok;
 }
 
+function normalizeLogBlock(text) {
+  return (text || "").replace(/\r\n/g, "\n").trim();
+}
+
 // ── Context update parsing ────────────────────────────────────────────────────
 
 const UPDATE_RE =
@@ -219,9 +223,91 @@ const PLACEHOLDER_MAP = {
   evening: "good evening",
 };
 
+const KANBAN_FILE = "kanban.json";
+const KANBAN_COLUMNS = ["todos", "doing it", "done"];
+const KANBAN_TITLES = {
+  todos: "todos",
+  "doing it": "doing it",
+  done: "done",
+};
+
+function normalizeTaskText(text) {
+  return (text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[.,;:!?]+$/g, "")
+    .trim();
+}
+
+function buildTaskId(prefix = "task") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseNowTasks(nowContent) {
+  if (!nowContent) return [];
+  const tasks = [];
+  const lines = nowContent.split("\n");
+  for (const line of lines) {
+    const m = line.match(/^\s*-\s*\[([ xX])\]\s+(.+?)\s*$/);
+    if (!m) continue;
+    const done = m[1].toLowerCase() === "x";
+    const text = m[2].trim();
+    if (!text) continue;
+    tasks.push({
+      id: `now-${normalizeTaskText(text).replace(/\s+/g, "-").slice(0, 80)}`,
+      text,
+      status: done ? "done" : "todos",
+      source: "now.md",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+  return tasks;
+}
+
+function parseChatTasks(text) {
+  if (!text) return [];
+  const pieces = text
+    .split(/\n+/)
+    .flatMap(line => line.split(/[.;](?:\s+|$)/))
+    .map(s => s.replace(/^\s*[-*]\s*/, "").trim())
+    .filter(Boolean);
+
+  const isTaskLike = (value) => {
+    if (value.length < 8 || value.length > 180) return false;
+    if (/\?$/.test(value)) return false;
+    const lowered = value.toLowerCase();
+    if (/^(hi|hello|thanks|ok|yes|no)\b/.test(lowered)) return false;
+    return /(^|\b)(need to|todo|to do|fix|finish|build|send|create|update|plan|deploy|write|confirm|ship|review|follow up)\b/.test(lowered);
+  };
+
+  return pieces
+    .filter(isTaskLike)
+    .map(value => ({
+      id: buildTaskId("chat"),
+      text: value,
+      status: "todos",
+      source: "chat",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+}
+
+function mergeTasks(existing, incoming) {
+  const out = [...existing];
+  const seen = new Set(existing.map(t => normalizeTaskText(t.text)));
+  for (const task of incoming) {
+    const key = normalizeTaskText(task.text);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(task);
+  }
+  return out;
+}
+
 // ── Document hook (single scrollable day) ─────────────────────────────────────
 
-function useDocument() {
+function useDocument({ onUserMessage } = {}) {
   const docFile = "thread_document.json";
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -263,8 +349,11 @@ function useDocument() {
     for (const { file, content, mode } of updates) {
       if (mode === "append" && file === "log.md") {
         const cur = await readContextFile(file);
-        const piece = content.trim();
-        if (piece && cur.endsWith(piece)) continue;
+        const piece = normalizeLogBlock(content);
+        const normalizedCur = normalizeLogBlock(cur);
+        // Prevent duplicate daily entries even when the same block
+        // is appended again later (not only as the final suffix).
+        if (piece && normalizedCur.includes(piece)) continue;
       }
       const ok = await writeContextFile(file, content, mode);
       if (ok) updated.push(file);
@@ -287,6 +376,7 @@ function useDocument() {
   function submit(text) {
     const content = text.trim();
     if (!content || loading) return;
+    if (onUserMessage) onUserMessage(content);
     const slot = getTimeSlot(new Date().getHours());
     const entry = { slot, text: content, ts: Date.now(), response: null };
     const next = [...entries, entry];
@@ -316,7 +406,7 @@ function useDocument() {
     });
   }
 
-  return { entries, submit, loading, toast };
+  return { entries, submit, loading, toast, nowContent: ctx.now };
 }
 
 // ── Daily record helpers ──────────────────────────────────────────────────────
@@ -542,6 +632,222 @@ function ChatView({ entries, submit, loading, currentSlot, toast }) {
   );
 }
 
+function useKanban(nowContent) {
+  const [tasks, setTasks] = useState([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadKanban() {
+      const raw = await readContextFile(KANBAN_FILE);
+      if (cancelled) return;
+      if (!raw.trim()) {
+        setTasks([]);
+        setReady(true);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        const normalized = Array.isArray(parsed)
+          ? parsed.map((task) => ({
+              ...task,
+              status: task.status === "backlog" ? "todos" : task.status,
+            }))
+          : [];
+        setTasks(normalized);
+      } catch {
+        setTasks([]);
+      } finally {
+        setReady(true);
+      }
+    }
+    void loadKanban();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    void writeContextFile(KANBAN_FILE, JSON.stringify(tasks, null, 2), "replace");
+  }, [tasks, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const fromNow = parseNowTasks(nowContent);
+    if (!fromNow.length) return;
+    setTasks(prev => mergeTasks(prev, fromNow));
+  }, [nowContent, ready]);
+
+  const ingestChatText = useCallback((text) => {
+    const fromChat = parseChatTasks(text);
+    if (!fromChat.length) return;
+    setTasks(prev => mergeTasks(prev, fromChat));
+  }, []);
+
+  const moveTask = useCallback((taskId, nextStatus) => {
+    if (!KANBAN_COLUMNS.includes(nextStatus)) return;
+    setTasks(prev => prev.map(task =>
+      task.id === taskId ? { ...task, status: nextStatus, updatedAt: Date.now() } : task
+    ));
+  }, []);
+
+  const moveTaskToPosition = useCallback((taskId, nextStatus, toIndex) => {
+    if (!KANBAN_COLUMNS.includes(nextStatus)) return;
+    setTasks(prev => {
+      const moving = prev.find(t => t.id === taskId);
+      if (!moving) return prev;
+
+      const others = prev.filter(t => t.id !== taskId);
+      const before = [];
+      const targetCol = [];
+      const after = [];
+
+      for (const task of others) {
+        if (task.status !== nextStatus) {
+          if (!targetCol.length) before.push(task);
+          else after.push(task);
+          continue;
+        }
+        targetCol.push(task);
+      }
+
+      const clampedIndex = Math.max(0, Math.min(toIndex, targetCol.length));
+      targetCol.splice(clampedIndex, 0, {
+        ...moving,
+        status: nextStatus,
+        updatedAt: Date.now(),
+      });
+      return [...before, ...targetCol, ...after];
+    });
+  }, []);
+
+  const updateTaskText = useCallback((taskId, text) => {
+    const cleaned = (text || "").trim();
+    if (!cleaned) return;
+    setTasks(prev => prev.map(task =>
+      task.id === taskId ? { ...task, text: cleaned, updatedAt: Date.now() } : task
+    ));
+  }, []);
+
+  const deleteTask = useCallback((taskId) => {
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+  }, []);
+
+  return { tasks, ready, ingestChatText, moveTask, moveTaskToPosition, updateTaskText, deleteTask };
+}
+
+function KanbanBoard({ tasks, onMoveTask, onMoveTaskToPosition, onUpdateTaskText, onDeleteTask }) {
+  const [draggingId, setDraggingId] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState("");
+  const [editingText, setEditingText] = useState("");
+  const byColumn = KANBAN_COLUMNS.reduce((acc, column) => {
+    acc[column] = tasks.filter(task => task.status === column);
+    return acc;
+  }, {});
+
+  const editingTask = tasks.find(t => t.id === editingTaskId) || null;
+
+  function openEditor(task) {
+    setEditingTaskId(task.id);
+    setEditingText(task.text || "");
+  }
+
+  function closeEditor() {
+    setEditingTaskId("");
+    setEditingText("");
+  }
+
+  return (
+    <div className="sa-kanban-wrap">
+    <div className="sa-kanban">
+      {KANBAN_COLUMNS.map((column) => (
+        <div
+          key={column}
+          className="sa-kanban__column"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => {
+            if (!draggingId) return;
+            onMoveTask(draggingId, column);
+            setDraggingId("");
+          }}
+        >
+          <div className="sa-kanban__column-head">
+            <span>{KANBAN_TITLES[column]}</span>
+            <span>{byColumn[column].length}</span>
+          </div>
+          <div className="sa-kanban__cards">
+            {byColumn[column].map((task, index) => (
+              <div
+                key={task.id}
+                className="sa-kanban__card"
+                draggable
+                onDragStart={() => setDraggingId(task.id)}
+                onDragEnd={() => setDraggingId("")}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (!draggingId || draggingId === task.id) return;
+                  onMoveTaskToPosition(draggingId, column, index);
+                  setDraggingId("");
+                }}
+              >
+                <div className="sa-kanban__card-top">
+                  <p>{task.text}</p>
+                  <button
+                    type="button"
+                    className="sa-kanban__edit"
+                    aria-label="Edit task"
+                    title="Edit task"
+                    onClick={() => openEditor(task)}
+                  >
+                    ✎
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+    {editingTask && (
+      <div className="sa-kanban__overlay" role="dialog" aria-modal="true" aria-label="Edit task">
+        <div className="sa-kanban__overlay-panel">
+          <p className="sa-kanban__overlay-title">Edit task</p>
+          <textarea
+            className="sa-kanban__overlay-input"
+            value={editingText}
+            onChange={(e) => setEditingText(e.target.value)}
+            placeholder="Task details"
+          />
+          <div className="sa-kanban__overlay-actions">
+            <button
+              type="button"
+              className="sa-kanban__overlay-btn sa-kanban__overlay-btn--danger"
+              onClick={() => {
+                onDeleteTask(editingTask.id);
+                closeEditor();
+              }}
+            >
+              delete
+            </button>
+            <button type="button" className="sa-kanban__overlay-btn" onClick={closeEditor}>cancel</button>
+            <button
+              type="button"
+              className="sa-kanban__overlay-btn sa-kanban__overlay-btn--primary"
+              onClick={() => {
+                onUpdateTaskText(editingTask.id, editingText);
+                closeEditor();
+              }}
+            >
+              save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </div>
+  );
+}
+
 // ── Debug panel (logged entries only) ─────────────────────────────────────────
 
 function DebugPanel({ onClose }) {
@@ -605,6 +911,192 @@ function DebugPanel({ onClose }) {
   );
 }
 
+// ── Settings panel (direct context file editing) ──────────────────────────────
+
+function SettingsPanel({ onClose }) {
+  const FILES = ["context.md", "now.md", "log.md"];
+  const [activeFile, setActiveFile] = useState(FILES[0]);
+  const [drafts, setDrafts] = useState({});
+  const [loadingFile, setLoadingFile] = useState("");
+  const [savingFile, setSavingFile] = useState("");
+  const [status, setStatus] = useState("");
+
+  const loadFile = useCallback(async (file) => {
+    setLoadingFile(file);
+    const content = await readContextFile(file);
+    setDrafts(prev => ({ ...prev, [file]: content || "" }));
+    setLoadingFile("");
+  }, []);
+
+  useEffect(() => {
+    FILES.forEach(file => { void loadFile(file); });
+  }, [loadFile]);
+
+  async function saveActiveFile() {
+    const content = drafts[activeFile] ?? "";
+    setSavingFile(activeFile);
+    const ok = await writeContextFile(activeFile, content, "replace");
+    setSavingFile("");
+    setStatus(ok ? `saved ${activeFile}` : `failed to save ${activeFile}`);
+    setTimeout(() => setStatus(""), 2500);
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sa-settings-label"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 110,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        padding: "0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom))",
+        background: "var(--color-bg)",
+        boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.06)",
+      }}
+    >
+      <div style={{
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        marginBottom: "0.75rem",
+        padding: "10px 12px",
+        borderRadius: "var(--sa-composer-radius, 10px)",
+        background: "var(--color-bg-panel)",
+        border: "0.5px solid var(--color-border-tertiary)",
+      }}>
+        <p
+          id="sa-settings-label"
+          style={{
+            fontSize: 9,
+            fontWeight: 600,
+            color: "var(--color-text-tertiary)",
+            margin: 0,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >settings</p>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            marginLeft: "auto",
+            fontSize: 9,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-tertiary)",
+            fontFamily: "var(--sa-chat-font)",
+            letterSpacing: "0.04em",
+            padding: "4px 0",
+          }}
+        >close</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: "0.75rem" }}>
+        {FILES.map((file) => {
+          const isActive = activeFile === file;
+          return (
+            <button
+              key={file}
+              type="button"
+              onClick={() => setActiveFile(file)}
+              style={{
+                border: "0.5px solid var(--color-border-secondary)",
+                borderColor: isActive ? "var(--color-accent)" : "var(--color-border-secondary)",
+                background: isActive ? "var(--color-bubble-user)" : "var(--color-bg)",
+                color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: 10,
+                fontFamily: "var(--sa-chat-font)",
+                cursor: "pointer",
+              }}
+            >
+              {file}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        borderRadius: "var(--sa-composer-radius, 10px)",
+        background: "var(--color-bg-panel)",
+        border: "0.5px solid var(--color-border-tertiary)",
+        padding: "10px",
+      }}>
+        <textarea
+          value={drafts[activeFile] ?? ""}
+          onChange={e => setDrafts(prev => ({ ...prev, [activeFile]: e.target.value }))}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            border: "none",
+            outline: "none",
+            resize: "none",
+            background: "transparent",
+            color: "var(--color-text-primary)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            lineHeight: 1.55,
+          }}
+          placeholder={loadingFile === activeFile ? "loading..." : "empty file"}
+        />
+        <div style={{ display: "flex", alignItems: "center", marginTop: "0.5rem" }}>
+          <p style={{ margin: 0, fontSize: 9, color: "var(--color-text-tertiary)", letterSpacing: "0.04em" }}>
+            {loadingFile === activeFile ? `loading ${activeFile}...` : status || "edit and save directly"}
+          </p>
+          <button
+            type="button"
+            onClick={saveActiveFile}
+            disabled={savingFile === activeFile}
+            style={{
+              marginLeft: "auto",
+              border: "0.5px solid var(--color-border-accent)",
+              background: "var(--color-bg)",
+              borderRadius: 8,
+              padding: "6px 10px",
+              fontSize: 10,
+              fontFamily: "var(--sa-chat-font)",
+              color: "var(--color-text-primary)",
+              cursor: savingFile === activeFile ? "default" : "pointer",
+              opacity: savingFile === activeFile ? 0.6 : 1,
+            }}
+          >
+            {savingFile === activeFile ? "saving..." : "save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useIsMobile(breakpointPx = 900) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(max-width: ${breakpointPx}px)`).matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const onChange = () => setIsMobile(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [breakpointPx]);
+
+  return isMobile;
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 export default function StudioAsh() {
@@ -616,10 +1108,18 @@ export default function StudioAsh() {
 
   const currentSlot = getTimeSlot(now.getHours());
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
-  const { entries, submit, loading, toast } = useDocument();
+  const [boardHidden, setBoardHidden] = useState(false);
+  const isMobile = useIsMobile(900);
+  const [kanbanNowContent, setKanbanNowContent] = useState("");
+  const kanban = useKanban(kanbanNowContent);
+  const { entries, submit, loading, toast, nowContent } = useDocument({ onUserMessage: kanban.ingestChatText });
   const [debugOpen, setDebugOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const longPressRef = useRef(null);
+
+  useEffect(() => {
+    setKanbanNowContent(nowContent || "");
+  }, [nowContent]);
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -641,7 +1141,7 @@ export default function StudioAsh() {
     <div
       id="studio-ash-root"
       style={{
-        maxWidth: "var(--sa-max-width)",
+        maxWidth: isMobile || boardHidden ? "var(--sa-max-width)" : "min(1280px, 96vw)",
         margin: "0 auto",
         padding: "2rem 1.25rem 0",
         fontFamily: "var(--sa-chat-font)",
@@ -654,7 +1154,8 @@ export default function StudioAsh() {
     >
 
       {/* Header */}
-      <div style={{ marginBottom: "1.5rem", flexShrink: 0 }}>
+      <div style={{ marginBottom: "1rem", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <p
           onPointerDown={onWordmarkDown}
           onPointerUp={onWordmarkUp}
@@ -670,23 +1171,96 @@ export default function StudioAsh() {
             cursor: "default",
             userSelect: "none",
           }}
-        >Ash.</p>
+        >studio ash</p>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Open settings"
+            title="Settings"
+            style={{
+              marginLeft: "auto",
+              border: "0.5px solid var(--color-border-secondary)",
+              background: "var(--color-bg)",
+              color: "var(--color-text-secondary)",
+              borderRadius: 8,
+              width: 24,
+              height: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ⚙
+          </button>
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => setBoardHidden(v => !v)}
+              aria-label={boardHidden ? "Show board" : "Hide board"}
+              title={boardHidden ? "Show board" : "Hide board"}
+              style={{
+                border: "0.5px solid var(--color-border-secondary)",
+                background: "var(--color-bg)",
+                color: "var(--color-text-secondary)",
+                borderRadius: 8,
+                width: 24,
+                height: 24,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              <img
+                src="/kanban.png"
+                alt=""
+                width={14}
+                height={14}
+                style={{ display: "block", objectFit: "contain" }}
+              />
+            </button>
+          )}
+        </div>
         <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>
           {formatDate(now)}
           <span style={{ marginLeft: 10, color: "var(--color-text-tertiary)" }}>{timeStr}</span>
         </p>
       </div>
 
-      {/* Chat */}
-      <ChatView
-        entries={entries}
-        submit={submit}
-        loading={loading}
-        currentSlot={currentSlot}
-        toast={toast}
-      />
+      <div className="sa-main">
+        <div className="sa-main__chat">
+          <ChatView
+            entries={entries}
+            submit={submit}
+            loading={loading}
+            currentSlot={currentSlot}
+            toast={toast}
+          />
+        </div>
+        {!isMobile && !boardHidden && (
+          <div className="sa-main__board">
+            {!kanban.ready ? (
+              <p style={{ margin: 0, color: "var(--color-text-tertiary)", fontSize: 11 }}>loading board...</p>
+            ) : (
+              <KanbanBoard
+                tasks={kanban.tasks}
+                onMoveTask={kanban.moveTask}
+                onMoveTaskToPosition={kanban.moveTaskToPosition}
+                onUpdateTaskText={kanban.updateTaskText}
+                onDeleteTask={kanban.deleteTask}
+              />
+            )}
+          </div>
+        )}
+      </div>
 
       {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} />}
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
 
     </div>
   );
