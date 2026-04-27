@@ -1,61 +1,82 @@
-# now.md
-> this week + this season — operational and directional in one place
-> refresh weekly (Sunday), review seasonally (end of June)
+# now
+last updated: April 28 2026
+season: Spring
 
----
+## current focus
+May 21-22 first ship date — games arriving at MOCO around May 19. Two to three weeks to prepare fulfillment, marketing, and store for launch.
 
-## season — spring 2026
-*March → June 2026*
+## freight + delivery timeline
+- ETD: April 23 (Ningbo)
+- ETA: May 9 (Long Beach)
+- Estimated delivery to MOCO: May 19
+- First orders can ship: May 21-22
 
-**theme: build**
-Build with hands (planter, pergola, terrace). Build with code (Studio Ash, Wisdom Map).
-Build the COO version of myself. Build consistency through the energy dips.
+## active projects
 
-**the question for this season:** what does it feel like to finish something?
+### CRI product launch
+- [x] All three games confirmed ready — HeroTime (Jerick and Moris), April 14
+- [x] PrimeShip (Cindy) notified — freight timeline confirmed
+- [x] Ocean freight pickup timeline confirmed with Cindy
+- [x] Shopify = source of truth for inventory (Tim confirmed), Xero mirrors second
+- [ ] Swap 3D mockup assets into website — quick win, do today
+- [ ] Enter 3 pre-orders into Shopify (ping Eric on Slack to confirm right process first)
+- [ ] Send acknowledgement email to 3 pre-order customers once in Shopify
+- [ ] Shopify pre-order waitlist setup
+- [ ] Confirm Brevo paid credits with Tim
+- [ ] Create branded email template (simpler than full campaign)
+- [ ] Email campaign — two audiences: warm contacts / new store visitors
+- [ ] Examina training waitlist — quick Google Form (Tim's request, educator interest)
+  - Collect: number of sessions, date/time/length, price range
+- [ ] Video — Play: The Good Life Game breakfast teaser (Breakfast & The Furious)
+- [ ] Marketing materials across all three products
+- [ ] Work out fulfillment workflow with Eric — what does a smooth first order look like?
 
-**season goals**
-- [ ] June 21 CRI launch — all three games live
-- [ ] Studio Ash running as a real daily habit
-- [ ] Planter boxes built, pergola scoped
-- [ ] Boxing consistency maintained through the season
-- [ ] Measurable Spanish progress
+### Thursday Tim sync — monthly planning agenda
+- What's working / what's not working
+- May timeline: delivery → first orders → marketing push
+- Fulfillment workflow: end-to-end first order process
+- Basecamp restructure for maximum productivity
+- Email + waitlist status
+- Wisdom Map — where does it fit in May?
 
----
+### Wisdom Map app
+- Working HTML/JS prototype exists — cinematic SVG camera system, mountain scene
+- CRI brand assets integrated (CoFo Holz Light, Kobe Bold fonts)
+- Palette: Fog, Cerulean, Olive, Dusk, Midnight, Forest, Rose, Apricot, Skyblue, Pistachio, Lilac, Sand
+- Scoped as companion to Play: The Good Life Game
+- On pause due to launch prep — revisit in May
 
-## week of April 14 2026
+### Studio Ash
+- Personal daily planning and reflection tool — built in React with Vite
+- Running locally at localhost:5173
+- Context system: context.md, now.md, log.md
+- Next: wire up Anthropic API for live AI interaction
+- [ ] Fix morning pages prompts
+- [ ] Deploy somewhere shareable
 
-**intention:** Get Studio Ash running with the API. Ship Shopify pre-order waitlist.
+### CRI web presence
+- playthegoodlife.game — Obsidian Publish site — LIVE, Tim making edits
+- reflectiveintelligence.org (Squarespace) — updated, pausing further work until after launch
+- [ ] Swap 3D mockup assets into website
 
-### CRI — active
-- [x] All three games confirmed ready — HeroTime (Jerick + Moris), April 14
-- [x] PrimeShip (Cindy) notified to coordinate pickup
-- [ ] Confirm ocean freight timeline with Cindy
-- [ ] Shopify pre-order waitlist — set up and live
-- [ ] Email marketing tool — decision needed
-- [ ] Marketing materials — all three products
+## inventory + fulfillment
+- Shopify = source of truth for inventory (connected to MOCO)
+- Xero = accounting mirror (Tim's tool, updated second)
+- Eric (MOCO) = main fulfillment contact, active Slack channel
+- Fulfillment workflow needs to be mapped before May 21
 
-### open loops
-- Xero setup
+## open loops
+- Brevo top-up confirmation
+- Xero setup (mirrors Shopify)
+- School district sales — purchase order and vendor registration requirements
+- Zoho Books for inventory and invoicing (introduced by Tim)
 
-### waiting on
-- Cindy (PrimeShip) — freight pickup confirmation update to timeline
-- Eric (MOCO) — warehouse readiness
+## waiting on
+- Eric (MOCO) — confirm pre-order entry process + fulfillment workflow readiness
 
-### tim sync prep — Mon + Wed 4pm
-- Games confirmed ready April 14
-- PrimeShip coordinating pickup
-
-### personal
-- [ ] Get milk
-- Studio Ash: plan vision and design before next build session
-- Studio Ash: fix pending design changes (noted end of day Wed)
-- Pokebudz: find a window to start deployment
-- Terrace: planter box materials from Leroy Merlin
-- Pre-family visit: grocery shopping
-- Pre-family visit: clean / create space in living room
-
----
-
-## sunday review
-*What worked? What didn't? What carries forward?*
-→
+## this week
+- Tim sync: Thursday (monthly planning)
+- **Today:** swap 3D assets, enter pre-orders into Shopify (ping Eric first)
+- **Tuesday:** branded email template, Examina training Google Form
+- **Wednesday:** breakfast video, website assets if not done
+- **Thursday:** finalize Tim sync agenda before meeting

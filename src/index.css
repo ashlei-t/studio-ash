@@ -50,6 +50,9 @@
   --sa-max-width:     480px;
   --sa-bubble-radius: 16px;
   --sa-bubble-max-w:  85%;
+  /* Extra room so right-aligned bubbles don’t sit under the scrollbar */
+  --sa-chat-scroll-pad-x: 10px;
+  --sa-chat-scroll-pad-r-extra: 8px;
 
   /* ── Base ───────────────────────────────────────────────────────────────────── */
   font: 16px/145% var(--font-sans);
@@ -139,6 +142,18 @@ p { margin: 0; }
   margin-left: 1px;
   vertical-align: text-bottom;
   animation: sa-cursor-blink 0.8s steps(2) infinite;
+}
+
+.sa-chat__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-left: var(--sa-chat-scroll-pad-x);
+  padding-right: calc(var(--sa-chat-scroll-pad-x) + var(--sa-chat-scroll-pad-r-extra));
+  padding-bottom: 1rem;
+  box-sizing: border-box;
 }
 
 

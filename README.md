@@ -29,12 +29,20 @@ VITE_ANTHROPIC_API_KEY=sk-ant-api03-...
 
 ## Scripts
 
-| Command        | Description              |
-| -------------- | ------------------------ |
-| `npm run dev`  | Dev server with HMR      |
-| `npm run build` | Production build → `dist` |
+| Command           | Description              |
+| ----------------- | ------------------------ |
+| `npm run dev`     | Dev server with HMR (localhost only) |
+| `npm run dev:host` | Dev server bound to **all interfaces** — use on your phone (see below) |
+| `npm run build`   | Production build → `dist` |
 | `npm run preview` | Serve the production build locally |
-| `npm run lint` | ESLint                   |
+| `npm run lint`    | ESLint                   |
+
+### Using the app on your phone (same Wi‑Fi)
+
+1. On your computer, run **`npm run dev:host`** (this is `vite --host`).
+2. In the terminal, Vite prints **Network** URLs, e.g. `http://192.168.1.x:5173/`.
+3. Open that URL on your phone’s browser. Your machine and phone must be on the **same local network**.
+4. **Note:** Your Anthropic key is still bundled for the dev build; only use this on networks you trust. macOS may ask to allow incoming connections the first time.
 
 ## Local context files
 

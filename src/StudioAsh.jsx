@@ -469,7 +469,7 @@ function ChatView({ entries, submit, loading, currentSlot, toast }) {
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       {/* Messages */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 0 1rem" }}>
+      <div ref={scrollRef} className="sa-chat__scroll">
         {entries.map((entry, i) => {
           const isLast = i === entries.length - 1;
           const responseText = isLast && !typingDone ? typedResponse : entry.response;
