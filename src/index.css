@@ -12,27 +12,27 @@
   --font-logo:  'Helvetica Neue', Helvetica, Arial, sans-serif;
 
   /* ── Text colors ───────────────────────────────────────────────────────────── */
-  --color-text-primary:   #1c1b1f;
-  --color-text-secondary: #6b6570;
-  --color-text-tertiary:  #a09ba8;
-  --color-text-success:   #3a7d44;
+  --color-text-primary:   #121017;
+  --color-text-secondary: #4e4556;
+  --color-text-tertiary:  #7e7489;
+  --color-text-success:   #166534;
 
   /* ── Borders ───────────────────────────────────────────────────────────────── */
-  --color-border-secondary: #e2e0e5;
-  --color-border-tertiary:  #ece9ee;
-  --color-border-accent:    #c4b8a8;
+  --color-border-secondary: #d1cbd9;
+  --color-border-tertiary:  #ddd7e4;
+  --color-border-accent:    #7a5b43;
 
   /* ── Backgrounds ───────────────────────────────────────────────────────────── */
-  --color-bg:               #faf9f7;
-  --color-bg-panel:         #faf8f4;
-  --color-bubble-user:      #cab6e543;
+  --color-bg:               #f8f6f3;
+  --color-bg-panel:         #f2edf7;
+  --color-bubble-user:      #b391dd5a;
 
   /* ── Accent ────────────────────────────────────────────────────────────────── */
-  --color-accent: #6b5344;
+  --color-accent: #5f3a97;
 
   /* ── Chat typography (shared by bubbles, input, and markdown) ──────────────── */
-  --sa-chat-size: 13px;
-  --sa-chat-line: 1.65;
+  --sa-chat-size: 12px;
+  --sa-chat-line: 1.55;
   --sa-chat-font: var(--font-sans);
 
   /* ── Composer (bordered input + send) ──────────────────────────────────────── */
@@ -44,7 +44,7 @@
   --sa-composer-gap:        8px;
   --sa-composer-min-h:      44px;
   --sa-send-icon:           20px;
-  --sa-send-glyph-size:     15px;
+  --sa-send-glyph-size:     14px;
 
   /* ── Layout ────────────────────────────────────────────────────────────────── */
   --sa-max-width:     480px;
@@ -55,7 +55,7 @@
   --sa-chat-scroll-pad-r-extra: 8px;
 
   /* ── Base ───────────────────────────────────────────────────────────────────── */
-  font: 16px/145% var(--font-sans);
+  font: 15px/145% var(--font-sans);
   letter-spacing: 0.18px;
   color-scheme: light;
   color: var(--color-text-primary);
@@ -118,7 +118,7 @@ p { margin: 0; }
 
 .sa-bubble__time {
   display: block;
-  font-size: 10px;
+  font-size: 9px;
   color: var(--color-text-tertiary);
   margin-top: 4px;
   letter-spacing: 0.04em;
@@ -257,9 +257,9 @@ p { margin: 0; }
 }
 
 .sa-md h1 { font-size: 1.125rem; }
-.sa-md h2 { font-size: 1.05rem; }
-.sa-md h3 { font-size: 0.98rem; }
-.sa-md h4, .sa-md h5, .sa-md h6 { font-size: 0.94rem; }
+.sa-md h2 { font-size: 1rem; }
+.sa-md h3 { font-size: 0.92rem; }
+.sa-md h4, .sa-md h5, .sa-md h6 { font-size: 0.88rem; }
 
 .sa-md p { margin: 0.55em 0; }
 .sa-md strong { font-weight: 600; color: var(--color-text-primary); }
@@ -279,7 +279,7 @@ p { margin: 0; }
 
 .sa-md pre {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.55;
   background: var(--color-bg-panel);
   border: 0.5px solid var(--color-border-tertiary);
@@ -312,7 +312,7 @@ p { margin: 0; }
 .sa-md a { color: var(--color-accent); text-underline-offset: 2px; }
 .sa-md a:hover { color: var(--color-text-primary); }
 
-.sa-md table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0.65em 0; }
+.sa-md table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 0.65em 0; }
 .sa-md th, .sa-md td { border: 0.5px solid var(--color-border-secondary); padding: 0.35rem 0.5rem; text-align: left; }
 .sa-md th { background: var(--color-bg-panel); font-family: var(--sa-chat-font); font-weight: 600; color: var(--color-text-primary); }
 

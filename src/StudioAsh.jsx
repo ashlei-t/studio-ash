@@ -366,11 +366,11 @@ function DayView() {
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
       {!ready && (
-        <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0 }}>···</p>
+        <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", margin: 0 }}>···</p>
       )}
 
       {ready && entries.length === 0 && (
-        <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0, fontStyle: "italic" }}>
+        <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", margin: 0, fontStyle: "italic" }}>
           nothing logged yet today.
         </p>
       )}
@@ -378,7 +378,7 @@ function DayView() {
       {entries.map((entry, i) => (
         <div key={i} style={{ marginBottom: "1.1rem" }}>
           {i > 0 && <div style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", margin: "0 0 0.9rem" }} />}
-          <div style={{ fontSize: 13, lineHeight: 1.65, color: "var(--color-text-primary)", fontFamily: "var(--sa-chat-font)" }}>
+          <div style={{ fontSize: 12, lineHeight: 1.55, color: "var(--color-text-primary)", fontFamily: "var(--sa-chat-font)" }}>
             <AssistantMarkdown>{entry}</AssistantMarkdown>
           </div>
         </div>
@@ -502,14 +502,14 @@ function ChatView({ entries, submit, loading, currentSlot, toast }) {
 
         {loading && !lastResponse && (
           <div className="sa-bubble sa-bubble--assistant">
-            <p style={{ color: "var(--color-text-tertiary)", margin: 0, fontSize: 13 }}>···</p>
+            <p style={{ color: "var(--color-text-tertiary)", margin: 0, fontSize: 12 }}>···</p>
           </div>
         )}
       </div>
 
       {/* Toast */}
       {toast && (
-        <p style={{ fontSize: 11, color: "var(--color-text-success)", padding: "0 0 0.5rem", letterSpacing: "0.04em" }}>
+        <p style={{ fontSize: 10, color: "var(--color-text-success)", padding: "0 0 0.5rem", letterSpacing: "0.04em" }}>
           {toast}
         </p>
       )}
@@ -576,7 +576,7 @@ function DebugPanel({ onClose }) {
         <p
           id="sa-debug-logged-label"
           style={{
-            fontSize: 10, fontWeight: 500, color: "var(--color-text-tertiary)",
+            fontSize: 9, fontWeight: 600, color: "var(--color-text-tertiary)",
             margin: 0, letterSpacing: "0.06em", textTransform: "uppercase",
           }}
         >logged</p>
@@ -584,7 +584,7 @@ function DebugPanel({ onClose }) {
           type="button"
           onClick={onClose}
           style={{
-            marginLeft: "auto", fontSize: 10, background: "transparent",
+            marginLeft: "auto", fontSize: 9, background: "transparent",
             border: "none", cursor: "pointer", color: "var(--color-text-tertiary)",
             fontFamily: "var(--sa-chat-font)", letterSpacing: "0.04em", padding: "4px 0",
           }}
@@ -661,7 +661,7 @@ export default function StudioAsh() {
           onPointerLeave={onWordmarkUp}
           style={{
             fontFamily: "var(--font-logo)",
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: 700,
             color: "var(--color-text-primary)",
             margin: "0 0 4px",
@@ -671,7 +671,7 @@ export default function StudioAsh() {
             userSelect: "none",
           }}
         >Ash.</p>
-        <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>
+        <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>
           {formatDate(now)}
           <span style={{ marginLeft: 10, color: "var(--color-text-tertiary)" }}>{timeStr}</span>
         </p>
