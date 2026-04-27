@@ -6,10 +6,10 @@
 :root {
 
   /* ── Fonts ─────────────────────────────────────────────────────────────────── */
-  --font-sans:  'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-sans:  'Inter', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
-  --font-mono:  ui-monospace, 'SF Mono', Consolas, monospace;
-  --font-logo:  'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: "DotGothic16", sans-serif;
+  --font-logo:  'BBH Bartle', sans-serif;
 
   /* ── Text colors ───────────────────────────────────────────────────────────── */
   --color-text-primary:   #121017;
@@ -56,7 +56,8 @@
 
   /* ── Base ───────────────────────────────────────────────────────────────────── */
   font: 15px/145% var(--font-sans);
-  letter-spacing: 0.18px;
+  letter-spacing: -0.18px;
+  font-weight: 300;
   color-scheme: light;
   color: var(--color-text-primary);
   background: var(--color-bg);
@@ -132,6 +133,7 @@ p { margin: 0; }
   margin: 0;
   font-family: var(--sa-chat-font);
   font-size: var(--sa-chat-size);
+  letter-spacing: 1.18px;
   line-height: var(--sa-chat-line);
   color: var(--color-text-primary);
   white-space: pre-wrap;
@@ -430,15 +432,15 @@ p { margin: 0; }
 .sa-md h1, .sa-md h2, .sa-md h3,
 .sa-md h4, .sa-md h5, .sa-md h6 {
   font-family: var(--sa-chat-font);
-  font-weight: 600;
+  font-weight: 400;
   color: var(--color-text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
   line-height: 1.28;
   margin: 0.85em 0 0.4em;
   text-transform: none;
 }
 
-.sa-md h1 { font-size: 1.125rem; }
+.sa-md h1 { font-size: 2rem; }
 .sa-md h2 { font-size: 1rem; }
 .sa-md h3 { font-size: 0.92rem; }
 .sa-md h4, .sa-md h5, .sa-md h6 { font-size: 0.88rem; }
