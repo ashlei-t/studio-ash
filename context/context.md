@@ -104,7 +104,7 @@ Thinking About It → Talking About It → Waiting On It → Being About It → 
 - Building my portfolio projects: Pokebudz and portfolio website: backyardash.com
 
 ### health and body
-- Boxing MWF and training with Zulaika
+- Boxing Tuesdays and Thursdays and starting training with Zulaika
 - Spanish school Tue/Thu 10:10am - 12:00pm
 - Barcelona based — rooftop terrace, houseplants, home as a creative space, just got a new cat named Pepper.
 

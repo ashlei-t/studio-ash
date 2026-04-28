@@ -12,28 +12,33 @@
   --font-logo:  'BBH Bartle', sans-serif;
 
   /* ── Text colors ───────────────────────────────────────────────────────────── */
-  --color-text-primary:   #121017;
-  --color-text-secondary: #4e4556;
-  --color-text-tertiary:  #7e7489;
-  --color-text-success:   #166534;
+  --color-text-primary:   #17191c;
+  --color-text-secondary: #4c525a;
+  --color-text-tertiary:  #7a828c;
+  --color-text-success:   #385a45;
 
   /* ── Borders ───────────────────────────────────────────────────────────────── */
-  --color-border-secondary: #0e2c68;
-  --color-border-tertiary:  #ffffff;
-  --color-border-accent:    #ffed24da;
+  --color-border-secondary: #9ea6b0;
+  --color-border-tertiary:  #d9dde1;
+  --color-border-accent:    #6f7782;
 
   /* ── Backgrounds ───────────────────────────────────────────────────────────── */
-  --color-bg:               #ffffff;
-  --color-bg-panel:         #ffffff;
-  --color-bubble-user:      #dcebf3;
+  --color-bg:               #fafaf8;
+  --color-bg-panel:         #f1f1ed;
+  --color-bubble-user:      #eceeea;
 
   /* ── Accent ────────────────────────────────────────────────────────────────── */
-  --color-accent: #5f3a97;
+  --color-accent: #20242a;
 
   /* ── Chat typography (shared by bubbles, input, and markdown) ──────────────── */
   --sa-chat-size: 12px;
   --sa-chat-line: 1.55;
   --sa-chat-font: var(--font-sans);
+  --type-track-body: 0;
+  --type-track-ui: 0.01em;
+  --type-track-meta: 0.02em;
+  --type-track-label: 0.05em;
+  --type-track-display: 0.03em;
 
   /* ── Composer (bordered input + send) ──────────────────────────────────────── */
   --sa-composer-border:     0.5px solid var(--color-border-secondary);
@@ -56,7 +61,7 @@
 
   /* ── Base ───────────────────────────────────────────────────────────────────── */
   font: 15px/145% var(--font-sans);
-  letter-spacing: -0.18px;
+  letter-spacing: var(--type-track-body);
   font-weight: 300;
   color-scheme: light;
   color: var(--color-text-primary);
@@ -98,10 +103,11 @@ body { margin: 0; }
   width: min(56vw, 760px);
   min-width: 560px;
   min-height: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
+  margin-bottom: 1rem;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 14px;
+  background: var(--color-bg-panel);
+  padding: 0.55rem 0.55rem 1rem;
   overflow: hidden;
 }
 
@@ -133,7 +139,7 @@ p { margin: 0; }
   margin: 0;
   font-family: var(--sa-chat-font);
   font-size: var(--sa-chat-size);
-  letter-spacing: 1.18px;
+  letter-spacing: var(--type-track-ui);
   line-height: var(--sa-chat-line);
   color: var(--color-text-primary);
   white-space: pre-wrap;
@@ -149,7 +155,7 @@ p { margin: 0; }
   font-size: 9px;
   color: var(--color-text-tertiary);
   margin-top: 4px;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--type-track-meta);
   text-align: right;
 }
 
@@ -172,6 +178,30 @@ p { margin: 0; }
   animation: sa-cursor-blink 0.8s steps(2) infinite;
 }
 
+.sa-loading-dots {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sa-loading-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-text-tertiary);
+  opacity: 0.35;
+  animation: sa-dot-pulse 1.1s ease-in-out infinite;
+}
+
+.sa-loading-dots span:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.sa-loading-dots span:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
 .sa-chat__scroll {
   flex: 1;
   min-height: 0;
@@ -187,7 +217,7 @@ p { margin: 0; }
 .sa-kanban {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.6rem;
   min-height: 0;
   height: 100%;
 }
@@ -201,8 +231,8 @@ p { margin: 0; }
 .sa-kanban__column {
   min-height: 0;
   background: var(--color-bg);
-  border: none;
-  border-radius: 0;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
 }
@@ -211,17 +241,17 @@ p { margin: 0; }
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--color-bg);
-  border-bottom: 0.5px solid var(--color-border-secondary);
-  border-radius: 0;
-  padding: 0.4rem 0.5rem;
+  background: var(--color-bg-panel);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px 10px 0 0;
+  padding: 0.45rem 0.55rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: var(--color-text-secondary);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--type-track-label);
 }
 
 .sa-kanban__cards {
@@ -234,11 +264,16 @@ p { margin: 0; }
 }
 
 .sa-kanban__card {
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 8px;
-  background: var(--color-bubble-user);
-  padding: 0.45rem;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 9px;
+  background: var(--color-bg);
+  box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04);
+  padding: 0.48rem;
   cursor: grab;
+}
+
+.sa-kanban__card:active {
+  cursor: grabbing;
 }
 
 .sa-kanban__card p {
@@ -246,6 +281,7 @@ p { margin: 0; }
   color: var(--color-text-primary);
   font-size: 11px;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .sa-kanban__card-top {
@@ -292,7 +328,7 @@ p { margin: 0; }
 
 .sa-kanban__overlay-title {
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--type-track-label);
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
@@ -434,7 +470,7 @@ p { margin: 0; }
   font-family: var(--sa-chat-font);
   font-weight: 400;
   color: var(--color-text-primary);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--type-track-ui);
   line-height: 1.28;
   margin: 0.85em 0 0.4em;
   text-transform: none;
@@ -508,6 +544,11 @@ p { margin: 0; }
 @keyframes sa-cursor-blink {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0; }
+}
+
+@keyframes sa-dot-pulse {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-1px); }
 }
 
 @media (max-width: 900px) {
