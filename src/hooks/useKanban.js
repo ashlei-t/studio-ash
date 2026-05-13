@@ -9,20 +9,20 @@ import {
   parseNowTasks,
 } from "../lib/kanban.js";
 
-export function useKanban(nowContent) {
+export function useKanban(seasonContent) {
   const [tasks, setTasks] = useState([]);
   const ready = true;
   const [hydrated, setHydrated] = useState(false);
-  const lastNowWriteRef = useRef("");
+  const lastSeasonWriteRef = useRef("");
   const migrationDoneRef = useRef(false);
 
-  // Hydrate the local board state from the latest now.md content.
+  // Hydrate the local board state from the latest season.md content.
   // This is an intentional sync from an external source (file/prop) into
   // local state; the rule is suppressed so we keep the merge behaviour that
   // preserves user-driven moves/edits.
   useEffect(() => {
-    const hasBoard = hasKanbanSection(nowContent);
-    const fromBoard = parseNowTasks(nowContent);
+    const hasBoard = hasKanbanSection(seasonContent);
+    const fromBoard = parseNowTasks(seasonContent);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTasks((prev) => {
       if (fromBoard.length) return enforceKanbanRules(fromBoard);
@@ -31,33 +31,33 @@ export function useKanban(nowContent) {
       // On cold start, an empty board section should not wipe tasks.
       // Seed from non-kanban checklists until the board has real items.
       if (prev.length) return prev;
-      const fromChecklist = parseChecklistTasksOutsideKanban(nowContent);
+      const fromChecklist = parseChecklistTasksOutsideKanban(seasonContent);
       return enforceKanbanRules(fromChecklist);
     });
     setHydrated(true);
-  }, [nowContent]);
+  }, [seasonContent]);
 
   // One-time migration: if board exists but is empty, seed it from checklist tasks
   // and persist immediately so restarts have a real board source of truth.
   useEffect(() => {
-    if (!hydrated || migrationDoneRef.current || !nowContent) return;
-    const fromBoard = parseNowTasks(nowContent);
+    if (!hydrated || migrationDoneRef.current || !seasonContent) return;
+    const fromBoard = parseNowTasks(seasonContent);
     if (fromBoard.length) {
       migrationDoneRef.current = true;
       return;
     }
-    const fromChecklist = enforceKanbanRules(parseChecklistTasksOutsideKanban(nowContent));
+    const fromChecklist = enforceKanbanRules(parseChecklistTasksOutsideKanban(seasonContent));
     if (!fromChecklist.length) {
       migrationDoneRef.current = true;
       return;
     }
-    const migratedNow = mergeKanbanIntoNow(nowContent, fromChecklist);
-    lastNowWriteRef.current = migratedNow;
-    void writeContextFile("now.md", migratedNow, "replace");
+    const migratedSeason = mergeKanbanIntoNow(seasonContent, fromChecklist);
+    lastSeasonWriteRef.current = migratedSeason;
+    void writeContextFile("season.md", migratedSeason, "replace");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTasks(fromChecklist);
     migrationDoneRef.current = true;
-  }, [hydrated, nowContent]);
+  }, [hydrated, seasonContent]);
 
   const moveTask = useCallback((taskId, nextStatus) => {
     if (!KANBAN_COLUMNS.includes(nextStatus)) return;
@@ -116,17 +116,17 @@ export function useKanban(nowContent) {
     setTasks((prev) => enforceKanbanRules(prev.filter((task) => task.id !== taskId)));
   }, []);
 
-  // Persist user-driven board changes back to now.md (single source of truth).
+  // Persist user-driven board changes back to season.md (single source of truth).
   useEffect(() => {
     if (!hydrated) return;
-    if (!nowContent) return;
+    if (!seasonContent) return;
     // Safety guard: never overwrite an existing non-empty board with an empty local state.
-    if (!tasks.length && parseNowTasks(nowContent).length) return;
-    const nextNow = mergeKanbanIntoNow(nowContent, tasks);
-    if (!nextNow || nextNow === nowContent || nextNow === lastNowWriteRef.current) return;
-    lastNowWriteRef.current = nextNow;
-    void writeContextFile("now.md", nextNow, "replace");
-  }, [tasks, nowContent, hydrated]);
+    if (!tasks.length && parseNowTasks(seasonContent).length) return;
+    const nextSeason = mergeKanbanIntoNow(seasonContent, tasks);
+    if (!nextSeason || nextSeason === seasonContent || nextSeason === lastSeasonWriteRef.current) return;
+    lastSeasonWriteRef.current = nextSeason;
+    void writeContextFile("season.md", nextSeason, "replace");
+  }, [tasks, seasonContent, hydrated]);
 
   return { tasks, ready, moveTask, moveTaskToPosition, updateTaskText, deleteTask };
 }

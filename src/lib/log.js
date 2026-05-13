@@ -14,6 +14,81 @@ export function parseDatedLogBlock(block) {
   return { heading, dateLabel, body };
 }
 
+export function formatLogHeading(date = new Date()) {
+  const label = date.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return `### ${label}`;
+}
+
+export function forceLogBlockToToday(block, today = new Date()) {
+  const normalized = normalizeLogBlock(block);
+  if (!normalized) return "";
+  const lines = normalized.split("\n");
+  const heading = formatLogHeading(today);
+  if ((lines[0] || "").trim().startsWith("### ")) {
+    const body = lines.slice(1).join("\n").trim();
+    return body ? `${heading}\n${body}` : "";
+  }
+  return `${heading}\n${normalized}`;
+}
+
+function normalizeForSimilarity(text) {
+  return (text || "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenSet(text) {
+  const normalized = normalizeForSimilarity(text);
+  if (!normalized) return new Set();
+  return new Set(normalized.split(" ").filter((t) => t.length > 2));
+}
+
+function jaccardSimilarity(a, b) {
+  const setA = tokenSet(a);
+  const setB = tokenSet(b);
+  if (!setA.size || !setB.size) return 0;
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection += 1;
+  }
+  const union = setA.size + setB.size - intersection;
+  return union > 0 ? intersection / union : 0;
+}
+
+function areNearDuplicateEntries(a, b) {
+  const na = normalizeForSimilarity(a);
+  const nb = normalizeForSimilarity(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  return jaccardSimilarity(na, nb) >= 0.78;
+}
+
+function dedupeBodiesBySimilarity(bodies) {
+  const result = [];
+  for (const body of bodies) {
+    const clean = (body || "").trim();
+    if (!clean) continue;
+    let merged = false;
+    for (let i = 0; i < result.length; i += 1) {
+      if (!areNearDuplicateEntries(result[i], clean)) continue;
+      // Keep the richer variant when two entries describe the same beat.
+      if (clean.length > result[i].length) result[i] = clean;
+      merged = true;
+      break;
+    }
+    if (!merged) result.push(clean);
+  }
+  return result;
+}
+
 export function upsertLogEntry(existingLog, incomingBlock) {
   const current = existingLog || "";
   const parsed = parseDatedLogBlock(incomingBlock);
@@ -37,6 +112,12 @@ export function upsertLogEntry(existingLog, incomingBlock) {
     const existingNormalized = normalizeLogBlock(`${existing.heading}\n${existing.body}`);
     if (existingNormalized === incomingNormalized) {
       return { next: null, changed: false };
+    }
+    if (areNearDuplicateEntries(existing.body, parsed.body)) {
+      // If this append is essentially the same note, keep the richer one only.
+      const richerBody = parsed.body.length > existing.body.length ? parsed.body : existing.body;
+      deduped.push(normalizeLogBlock(`${parsed.heading}\n${richerBody}`));
+      continue;
     }
     // Same day, highly overlapping text: keep one richer version.
     if (
@@ -65,9 +146,7 @@ export function upsertLogEntry(existingLog, incomingBlock) {
     .filter(Boolean)
     .filter((entry) => entry.dateLabel === parsed.dateLabel)
     .map((entry) => entry.body);
-  const mergedBody = [...new Set([...sameDateBodies, parsed.body])]
-    .filter(Boolean)
-    .join("\n\n");
+  const mergedBody = dedupeBodiesBySimilarity([...sameDateBodies, parsed.body]).join("\n\n");
   const canonical = `${parsed.heading}\n${mergedBody}`.trim();
 
   const withoutDate = deduped.filter((chunk) => {

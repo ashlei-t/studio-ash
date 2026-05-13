@@ -1,25 +1,48 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { readContextFile, writeContextFile } from "../lib/api.js";
+import { useAuth } from "../auth/useAuth.js";
 
-const FILES = ["context.md", "now.md", "log.md"];
+const FILES = ["identity.md", "season.md", "thinkies.md"];
 
 export function SettingsPanel({ onClose }) {
+  const { user, signOut } = useAuth();
   const [activeFile, setActiveFile] = useState(FILES[0]);
   const [drafts, setDrafts] = useState({});
   const [loadingFile, setLoadingFile] = useState("");
   const [savingFile, setSavingFile] = useState("");
   const [status, setStatus] = useState("");
+  const [changedFiles, setChangedFiles] = useState({});
+  const lastLoadedRef = useRef({});
 
-  const loadFile = useCallback(async (file) => {
-    setLoadingFile(file);
+  const loadFile = useCallback(async (file, { silent = false } = {}) => {
+    if (!silent) setLoadingFile(file);
     const content = await readContextFile(file);
-    setDrafts((prev) => ({ ...prev, [file]: content || "" }));
-    setLoadingFile("");
-  }, []);
+    const nextContent = content || "";
+    const prevLoaded = lastLoadedRef.current[file];
+    if (typeof prevLoaded === "string" && prevLoaded !== nextContent) {
+      setChangedFiles((prev) => ({ ...prev, [file]: true }));
+    }
+    lastLoadedRef.current[file] = nextContent;
+    setDrafts((prev) => {
+      // Do not clobber active unsaved edits while polling for external updates.
+      if (silent && file === activeFile && prev[file] !== prevLoaded) return prev;
+      return { ...prev, [file]: nextContent };
+    });
+    if (!silent) setLoadingFile("");
+  }, [activeFile]);
+
+  const pollFiles = useCallback(async () => {
+    await Promise.all(FILES.map((file) => loadFile(file, { silent: true })));
+  }, [loadFile]);
 
   useEffect(() => {
     FILES.forEach((file) => { void loadFile(file); });
   }, [loadFile]);
+
+  useEffect(() => {
+    const id = setInterval(() => { void pollFiles(); }, 5000);
+    return () => clearInterval(id);
+  }, [pollFiles]);
 
   async function saveActiveFile() {
     const content = drafts[activeFile] ?? "";
@@ -27,6 +50,10 @@ export function SettingsPanel({ onClose }) {
     const ok = await writeContextFile(activeFile, content, "replace");
     setSavingFile("");
     setStatus(ok ? `saved ${activeFile}` : `failed to save ${activeFile}`);
+    if (ok) {
+      lastLoadedRef.current[activeFile] = content;
+      setChangedFiles((prev) => ({ ...prev, [activeFile]: false }));
+    }
     setTimeout(() => setStatus(""), 2500);
   }
 
@@ -69,11 +96,37 @@ export function SettingsPanel({ onClose }) {
             textTransform: "uppercase",
           }}
         >settings</p>
+        {user && (
+          <p
+            style={{
+              margin: "0 0 0 8px",
+              fontSize: 9,
+              color: "var(--color-text-tertiary)",
+              letterSpacing: "var(--type-track-meta)",
+            }}
+          >
+            {user.email}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => signOut()}
+          style={{
+            marginLeft: "auto",
+            fontSize: 9,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-tertiary)",
+            fontFamily: "var(--sa-chat-font)",
+            letterSpacing: "var(--type-track-meta)",
+            padding: "4px 8px 4px 0",
+          }}
+        >sign out</button>
         <button
           type="button"
           onClick={onClose}
           style={{
-            marginLeft: "auto",
             fontSize: 9,
             background: "transparent",
             border: "none",
@@ -98,7 +151,9 @@ export function SettingsPanel({ onClose }) {
                 border: "0.5px solid var(--color-border-secondary)",
                 borderColor: isActive ? "var(--color-accent)" : "var(--color-border-secondary)",
                 background: isActive ? "var(--color-bubble-user)" : "var(--color-bg)",
-                color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                color: changedFiles[file]
+                  ? "var(--color-text-danger)"
+                  : (isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)"),
                 borderRadius: 8,
                 padding: "6px 10px",
                 fontSize: 10,

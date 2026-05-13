@@ -1,33 +1,37 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../auth/useAuth.js";
 import { callClaude, readContextFile, writeContextFile } from "../lib/api.js";
-import { parseResponse } from "../lib/contextUpdates.js";
-import {
-  mergeBoardTasksPreferExisting,
-  mergeKanbanIntoNow,
-  parseNowTasks,
-} from "../lib/kanban.js";
-import { upsertLogEntry } from "../lib/log.js";
+import { applyContextUpdates } from "../lib/applyUpdates.js";
+import { parseResponse, stripUpdateSyntaxFromVisibleText } from "../lib/contextUpdates.js";
+import { maybeProposePersonalUpdates } from "../lib/personalObserver.js";
 import { CONTEXT_INSTRUCTIONS, PROMPT_MAP } from "../lib/prompts.js";
 import { getTimeSlot, isSameCalendarDay } from "../lib/time.js";
+import { useScope } from "../scope/useScope.js";
 
 const DOC_FILE = "thread_document.json";
+const OBSERVER_DEBOUNCE_MS = 20_000;
 
 export function useDocument() {
+  const { user } = useAuth();
+  const { scope, scopeVersion } = useScope();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [ctx, setCtx] = useState({ context: "", now: "", log: "" });
+  const [ctx, setCtx] = useState({ identity: "", season: "", thinkies: "" });
   const [toast, setToast] = useState("");
+  const observerTimerRef = useRef(null);
+  const observerRunningRef = useRef(false);
 
   const loadContext = useCallback(async () => {
-    const [context, now, log] = await Promise.all([
-      readContextFile("context.md"),
-      readContextFile("now.md"),
-      readContextFile("log.md"),
+    const [identity, season, thinkies] = await Promise.all([
+      readContextFile("identity.md"),
+      readContextFile("season.md"),
+      readContextFile("thinkies.md"),
     ]);
-    setCtx({ context, now, log });
+    setCtx({ identity, season, thinkies });
   }, []);
 
   useEffect(() => {
+    setEntries([]);
     loadContext();
     readContextFile(DOC_FILE).then((raw) => {
       if (!raw) return;
@@ -42,7 +46,14 @@ export function useDocument() {
         /* start fresh */
       }
     });
-  }, [loadContext]);
+  }, [loadContext, scopeVersion]);
+
+  // Cancel any pending observer run when scope changes or component unmounts.
+  useEffect(() => {
+    return () => {
+      if (observerTimerRef.current) clearTimeout(observerTimerRef.current);
+    };
+  }, [scopeVersion]);
 
   function showToast(msg) {
     setToast(msg);
@@ -50,46 +61,32 @@ export function useDocument() {
   }
 
   async function handleUpdates(updates) {
-    if (!updates.length) return;
-    const updated = [];
-    for (const { file, content, mode } of updates) {
-      if (mode === "replace" && file === "now.md") {
-        const curNow = await readContextFile("now.md");
-        const existingBoardTasks = parseNowTasks(curNow);
-        const incomingBoardTasks = parseNowTasks(content);
-        const mergedBoardTasks = mergeBoardTasksPreferExisting(
-          existingBoardTasks,
-          incomingBoardTasks,
-        );
-        const mergedNow = mergedBoardTasks.length
-          ? mergeKanbanIntoNow(content, mergedBoardTasks)
-          : content;
-        const ok = await writeContextFile(file, mergedNow, "replace");
-        if (ok) updated.push(file);
-        continue;
-      }
-      if (mode === "append" && file === "log.md") {
-        const cur = await readContextFile(file);
-        const merged = upsertLogEntry(cur, content);
-        if (!merged.changed || !merged.next) continue;
-        const ok = await writeContextFile(file, merged.next, "replace");
-        if (ok) updated.push(file);
-        continue;
-      }
-      const ok = await writeContextFile(file, content, mode);
-      if (ok) updated.push(file);
-    }
+    const updated = await applyContextUpdates(updates);
     if (updated.length) {
       await loadContext();
-      showToast(`updated: ${[...new Set(updated)].join(", ")}`);
+      showToast(`updated: ${updated.join(", ")}`);
     }
+  }
+
+  function scheduleObserver(nextEntries) {
+    if (scope.kind !== "personal" || !user?.id) return;
+    if (observerTimerRef.current) clearTimeout(observerTimerRef.current);
+    observerTimerRef.current = setTimeout(async () => {
+      if (observerRunningRef.current) return;
+      observerRunningRef.current = true;
+      try {
+        await maybeProposePersonalUpdates({ userId: user.id, entries: nextEntries });
+      } finally {
+        observerRunningRef.current = false;
+      }
+    }, OBSERVER_DEBOUNCE_MS);
   }
 
   function buildSystemPrompt(slot) {
     const parts = [PROMPT_MAP[slot] || PROMPT_MAP.morning];
-    if (ctx.context) parts.push(`\n## Personal context\n${ctx.context}`);
-    if (ctx.now) parts.push(`\n## Current sprint (now.md)\n${ctx.now}`);
-    if (ctx.log) parts.push(`\n## Log (log.md)\n${ctx.log}`);
+    if (ctx.identity) parts.push(`\n## Identity (identity.md)\n${ctx.identity}`);
+    if (ctx.season) parts.push(`\n## Current season (season.md)\n${ctx.season}`);
+    if (ctx.thinkies) parts.push(`\n## Thinkies (thinkies.md)\n${ctx.thinkies}`);
     parts.push(CONTEXT_INSTRUCTIONS);
     return parts.join("\n");
   }
@@ -114,17 +111,19 @@ export function useDocument() {
     callClaude(buildSystemPrompt(slot), messages, async (raw) => {
       try {
         const { displayText, updates } = parseResponse(raw);
+        const safeDisplayText = stripUpdateSyntaxFromVisibleText(displayText);
         const final = next.map((e, i) =>
-          i === next.length - 1 ? { ...e, response: displayText } : e,
+          i === next.length - 1 ? { ...e, response: safeDisplayText } : e,
         );
         setEntries(final);
         await writeContextFile(DOC_FILE, JSON.stringify(final), "replace");
         await handleUpdates(updates);
+        scheduleObserver(final);
       } finally {
         setLoading(false);
       }
     });
   }
 
-  return { entries, submit, loading, toast, nowContent: ctx.now };
+  return { entries, submit, loading, toast, seasonContent: ctx.season };
 }

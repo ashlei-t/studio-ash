@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatView } from "./components/ChatView.jsx";
 import { DebugPanel } from "./components/DebugPanel.jsx";
+import { InboxPanel } from "./components/InboxPanel.jsx";
 import { KanbanBoard } from "./components/KanbanBoard.jsx";
 import { SettingsPanel } from "./components/SettingsPanel.jsx";
 import { useDocument } from "./hooks/useDocument.js";
 import { useIsMobile } from "./hooks/useIsMobile.js";
 import { useKanban } from "./hooks/useKanban.js";
 import { formatDate, getTimeSlot } from "./lib/time.js";
+import { InviteButton } from "./scope/InviteButton.jsx";
+import { TeamSwitcher } from "./scope/TeamSwitcher.jsx";
+import { useScope } from "./scope/useScope.js";
+import { TeamChatView } from "./components/TeamChatView.jsx";
 
 export default function StudioAsh() {
   const [now, setNow] = useState(() => new Date());
@@ -17,12 +22,15 @@ export default function StudioAsh() {
 
   const currentSlot = getTimeSlot(now.getHours());
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const [boardHidden, setBoardHidden] = useState(false);
+  const [boardHidden, setBoardHidden] = useState(true);
   const isMobile = useIsMobile(900);
-  const { entries, submit, loading, toast, nowContent } = useDocument();
-  const kanban = useKanban(nowContent || "");
+  const { entries, submit, loading, toast, seasonContent } = useDocument();
+  const kanban = useKanban(seasonContent || "");
+  const { scope, teams } = useScope();
+  const activeTeam = scope.kind === "team" ? teams.find((t) => t.id === scope.id) : null;
   const [debugOpen, setDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const longPressRef = useRef(null);
 
   useEffect(() => {
@@ -76,6 +84,12 @@ export default function StudioAsh() {
             userSelect: "none",
           }}
         >***</p>
+          <div style={{ marginLeft: 8, alignSelf: "center", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <TeamSwitcher compact />
+            {scope.kind === "team" && scope.id && (
+              <InviteButton compact />
+            )}
+          </div>
           {!isMobile && (
             <button
               type="button"
@@ -109,11 +123,33 @@ export default function StudioAsh() {
           )}
           <button
             type="button"
+            onClick={() => setInboxOpen(true)}
+            aria-label="Open inbox"
+            title="Inbox"
+            style={{
+              marginLeft: isMobile ? "auto" : undefined,
+              border: "0.5px solid var(--color-border-secondary)",
+              background: "var(--color-bg)",
+              color: "var(--color-text-secondary)",
+              borderRadius: 8,
+              width: 24,
+              height: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ✉
+          </button>
+          <button
+            type="button"
             onClick={() => setSettingsOpen(true)}
             aria-label="Open settings"
             title="Settings"
             style={{
-              marginLeft: isMobile ? "auto" : undefined,
               border: "0.5px solid var(--color-border-secondary)",
               background: "var(--color-bg)",
               color: "var(--color-text-secondary)",
@@ -139,13 +175,17 @@ export default function StudioAsh() {
 
       <div className="sa-main">
         <div className="sa-main__chat">
-          <ChatView
-            entries={entries}
-            submit={submit}
-            loading={loading}
-            currentSlot={currentSlot}
-            toast={toast}
-          />
+          {scope.kind === "team" && scope.id ? (
+            <TeamChatView teamId={scope.id} teamName={activeTeam?.name} />
+          ) : (
+            <ChatView
+              entries={entries}
+              submit={submit}
+              loading={loading}
+              currentSlot={currentSlot}
+              toast={toast}
+            />
+          )}
         </div>
         {!isMobile && !boardHidden && (
           <div className="sa-main__board">
@@ -166,6 +206,7 @@ export default function StudioAsh() {
 
       {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+      {inboxOpen && <InboxPanel onClose={() => setInboxOpen(false)} />}
 
     </div>
   );

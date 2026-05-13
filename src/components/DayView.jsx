@@ -11,7 +11,7 @@ export function DayView() {
     let cancelled = false;
 
     function load() {
-      readContextFile("log.md").then((log) => {
+      readContextFile("thinkies.md").then((log) => {
         if (cancelled) return;
         setEntries(getTodayLogEntries(log, new Date()));
         setReady(true);

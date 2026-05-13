@@ -70,7 +70,7 @@ function buildGroupedTaskText(category, tasks) {
   return `${groupedTaskTitle(category)}\n${cleaned.map((task) => `- ${task}`).join("\n")}`;
 }
 
-export function buildStableTaskId(text, status = "todos", source = "now.md") {
+export function buildStableTaskId(text, status = "todos", source = "season.md") {
   const base = normalizeTaskText(text)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -146,10 +146,10 @@ export function parseNowTasks(nowContent) {
     const text = m[2].trim();
     if (!text) continue;
     tasks.push({
-      id: buildStableTaskId(text, currentColumn, "now"),
+      id: buildStableTaskId(text, currentColumn, "season"),
       text,
       status: currentColumn,
-      source: "now.md",
+      source: "season.md",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -189,10 +189,10 @@ export function parseChecklistTasksOutsideKanban(nowContent) {
     const text = m[2].trim();
     if (!text) continue;
     tasks.push({
-      id: buildStableTaskId(text, done ? "done" : "todos", "now-fallback"),
+      id: buildStableTaskId(text, done ? "done" : "todos", "season-fallback"),
       text,
       status: done ? "done" : "todos",
-      source: "now.md",
+      source: "season.md",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

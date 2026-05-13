@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AssistantMarkdown } from "../AssistantMarkdown.jsx";
 import { useTypingEffect } from "../hooks/useTypingEffect.js";
+import { stripUpdateSyntaxFromVisibleText } from "../lib/contextUpdates.js";
 import { PLACEHOLDER_MAP } from "../lib/prompts.js";
 import { formatTime } from "../lib/time.js";
 
@@ -56,7 +57,9 @@ export function ChatView({ entries, submit, loading, currentSlot, toast }) {
       <div ref={scrollRef} className="sa-chat__scroll">
         {entries.map((entry, i) => {
           const isLast = i === entries.length - 1;
-          const responseText = isLast && !typingDone ? typedResponse : entry.response;
+          const responseText = stripUpdateSyntaxFromVisibleText(
+            isLast && !typingDone ? typedResponse : entry.response,
+          );
           const showCursor = isLast && !typingDone;
 
           return (

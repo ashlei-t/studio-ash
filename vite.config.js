@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const ALLOWED = ['context.md', 'now.md', 'log.md']
+const ALLOWED = ['identity.md', 'season.md', 'thinkies.md']
 const ALLOWED_THREAD = /^thread_[a-z]+\.json$/
 
 function contextApiPlugin() {
