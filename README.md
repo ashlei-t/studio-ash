@@ -22,7 +22,7 @@ npm install
 Create a `.env` in the project root (this file is gitignored):
 
 ```bash
-VITE_ANTHROPIC_API_KEY=sk-ant-api03-...
+VITE_ANTHROPIC_API_KEY...
 ```
 
 > `VITE_*` variables are embedded in the client bundle. Treat this app as a **local / personal** tool unless you add a proper server-side secret.
