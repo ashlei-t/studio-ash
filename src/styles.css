@@ -1,0 +1,150 @@
+/* Phase 1 placeholder styling. Phase 2 replaces these tokens with the CRI
+   design system; components should only ever read the variables below. */
+
+:root {
+  --bg: #f0ebe3;
+  --text: #111111;
+  --muted: #6b6760;
+  --faint: #e6e3db;
+  --font-text: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-write: Georgia, 'Iowan Old Style', serif;
+  --space: 16px;
+  --measure: 40rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1918;
+    --text: #ece8e1;
+    --muted: #9a958d;
+    --faint: #2c2a28;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.page {
+  max-width: var(--measure);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: calc(var(--space) * 1.5) var(--space);
+  display: flex;
+  flex-direction: column;
+}
+
+.top, .bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space);
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.5rem;
+}
+
+.date { font-size: 0.85rem; font-weight: 400; color: var(--muted); margin: 0; }
+
+.writing {
+  flex: 1;
+  min-height: 50dvh;
+  margin: calc(var(--space) * 1.5) 0 var(--space);
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-write);
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.writing::placeholder { color: var(--muted); opacity: 0.6; }
+
+.quiet {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--faint);
+}
+
+.keep {
+  margin-left: auto;
+  background: var(--text);
+  color: var(--bg);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+}
+
+.latest {
+  margin-top: calc(var(--space) * 2);
+  padding-top: var(--space);
+  border-top: 1px solid var(--faint);
+  color: var(--muted);
+  font-family: var(--font-write);
+  line-height: 1.55;
+}
+
+.latest-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.reply {
+  margin: var(--space) 0 0;
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+}
+
+.day { margin-top: calc(var(--space) * 2); }
+
+.entry {
+  font-family: var(--font-write);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  padding: var(--space) 0;
+  border-bottom: 1px solid var(--faint);
+}
+
+.entry p { margin: 0; }
+.entry .reply { margin-top: calc(var(--space) / 2); color: var(--muted); }
+
+.signin {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 0.75);
+  margin-top: calc(var(--space) * 3);
+}
+
+.signin input {
+  font: inherit;
+  padding: 0.6rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--faint);
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+
+.signin .keep { align-self: flex-start; margin-left: 0; }
+.error { color: #b3261e; font-size: 0.9rem; }
