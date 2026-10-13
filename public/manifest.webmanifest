@@ -1,0 +1,9 @@
+{
+  "name": "Studio Ash",
+  "short_name": "Studio Ash",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0ebe3",
+  "theme_color": "#f0ebe3",
+  "icons": [{ "src": "/virgo.png", "sizes": "any", "type": "image/png" }]
+}

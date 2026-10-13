@@ -1,17 +1,15 @@
 # Studio Ash
 
-A calm **Vite + React** daily companion with **morning**, **focus**, and **evening** modes. It uses the Anthropic API (Claude) for conversation and keeps lightweight context in local markdown files under `context/`.
+A journal where Claude keeps what matters, so my past self can talk back.
+
+Open it and you're writing. After an entry, Claude replies only when it has a new insight or a past entry worth bringing back, and quietly keeps a three-tier markdown memory (long-term, short-term, everyday). v1 (team workspace, kanban, chat) lives on the `v1-archive` branch.
 
 ## Stack
 
-- [React](https://react.dev/) 19 · [Vite](https://vite.dev/) 8
-- [react-markdown](https://github.com/remarkjs/react-markdown) + [remark-gfm](https://github.com/remarkjs/remark-gfm)
-- Claude via Anthropic Messages API (proxied in dev so the browser can call `/api/anthropic/...`)
-
-## Prerequisites
-
-- Node.js (current LTS is a good default)
-- An [Anthropic API key](https://console.anthropic.com/)
+- React 19 + Vite 8, deployed as a static site (Vercel)
+- Supabase: Auth, Postgres (row-level security), Edge Functions
+- Claude API, called only from the `reflect` Edge Function, never from the browser
+- IndexedDB (`idb`) + a service worker, so writing works offline
 
 ## Setup
 
@@ -19,48 +17,44 @@ A calm **Vite + React** daily companion with **morning**, **focus**, and **eveni
 npm install
 ```
 
-Create a `.env` in the project root (this file is gitignored):
+`.env` in the project root (gitignored):
 
 ```bash
-VITE_ANTHROPIC_API_KEY...
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-> `VITE_*` variables are embedded in the client bundle. Treat this app as a **local / personal** tool unless you add a proper server-side secret.
+No Anthropic key belongs in `.env`. It is a Supabase secret:
+
+```bash
+supabase link --project-ref <project-ref>
+supabase db push
+supabase secrets set ANTHROPIC_API_KEY=...
+supabase functions deploy reflect
+```
+
+## How it fits together
+
+```
+src/
+  Write.jsx         the writing page (the whole app, mostly)
+  Earlier.jsx       past entries by day
+  SignIn.jsx        email + password, only when you ask to sync
+  lib/localStore.js entries in IndexedDB, draft in localStorage
+  lib/sync.js       push → pull → reflect, retried until it succeeds
+supabase/
+  functions/reflect Claude reply + memory updates, runs as the signed-in user
+  migrations/       0012_journal.sql adds `entries` and `memory` (0001–0011 are v1)
+public/sw.js        caches the app shell for offline use
+```
+
+Entries are saved on the device first and never deleted there; sync uploads them when there's a connection. `entries` and `memory` are private to their owner. Later phases add a separate share boundary for the team page.
 
 ## Scripts
 
-| Command           | Description              |
-| ----------------- | ------------------------ |
-| `npm run dev`     | Dev server with HMR (localhost only) |
-| `npm run dev:host` | Dev server bound to **all interfaces** — use on your phone (see below) |
-| `npm run build`   | Production build → `dist` |
-| `npm run preview` | Serve the production build locally |
-| `npm run lint`    | ESLint                   |
-
-### Using the app on your phone (same Wi‑Fi)
-
-1. On your computer, run **`npm run dev:host`** (this is `vite --host`).
-2. In the terminal, Vite prints **Network** URLs, e.g. `http://192.168.1.x:5173/`.
-3. Open that URL on your phone’s browser. Your machine and phone must be on the **same local network**.
-4. **Note:** Your Anthropic key is still bundled for the dev build; only use this on networks you trust. macOS may ask to allow incoming connections the first time.
-
-## Local context files
-
-In development, Vite serves a small middleware API at `/api/context` that reads and writes **only** these files in `context/`:
-
-- `context.md`
-- `now.md`
-- `log.md`
-
-The repo includes starter copies; the assistant can suggest updates that get merged into them.
-
-## How requests work in dev
-
-- **`/api/anthropic/*`** — proxied to `https://api.anthropic.com` (see `vite.config.js`).
-- **`/api/context/*`** — read/write the allowed markdown files above.
-
-Production builds do not include that dev middleware or proxy unless you deploy an equivalent backend.
-
-## License
-
-Private project (`"private": true` in `package.json`). Add a license file if you open-source it later.
+| Command | |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run dev:host` | Dev server on your LAN (phone testing) |
+| `npm run build` | Production build → `dist` |
+| `npm run lint` | ESLint |
